@@ -12,6 +12,7 @@ memchr = "2.3"
 [dev-dependencies]
 criterion = "0.3"
 memmem = "0.1"
+twoway = "0.2"
 
 [[bench]]
 name = "avx2_anysize"

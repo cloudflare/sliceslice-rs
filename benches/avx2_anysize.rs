@@ -46,10 +46,21 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("TwoWaySearcher::search_in with long haystack", |b| {
+    c.bench_function(
+        "memmem::TwoWaySearcher::search_in with long haystack",
+        |b| {
+            b.iter(|| {
+                for twoway_word in &twoway_words {
+                    twoway_word.search_in(content.as_bytes());
+                }
+            })
+        },
+    );
+
+    c.bench_function("twoway::find_bytes with long haystack", |b| {
         b.iter(|| {
-            for twoway_word in &twoway_words {
-                twoway_word.search_in(content.as_bytes());
+            for word in &words {
+                twoway::find_bytes(content.as_bytes(), word.as_bytes());
             }
         })
     });
@@ -135,11 +146,24 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("TwoWaySearcher::search_in with short haystack", |b| {
+    c.bench_function(
+        "memmem::TwoWaySearcher::search_in with short haystack",
+        |b| {
+            b.iter(|| {
+                for (i, word) in twoway_words.iter().enumerate() {
+                    for content in &words[(i + 1)..] {
+                        word.search_in(content.as_bytes());
+                    }
+                }
+            })
+        },
+    );
+
+    c.bench_function("twoway::find_bytes with short haystack", |b| {
         b.iter(|| {
-            for (i, word) in twoway_words.iter().enumerate() {
+            for (i, word) in words.iter().enumerate() {
                 for content in &words[(i + 1)..] {
-                    word.search_in(content.as_bytes());
+                    twoway::find_bytes(content.as_bytes(), word.as_bytes());
                 }
             }
         })
