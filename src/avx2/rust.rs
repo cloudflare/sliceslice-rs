@@ -1,3 +1,6 @@
+#![allow(clippy::cast_ptr_alignment)]
+#![allow(clippy::missing_safety_doc)]
+
 use crate::bits::*;
 use crate::memcmp::*;
 
@@ -271,7 +274,7 @@ fn strstr_rabin_karp(haystack: &[u8], needle: &[u8]) -> bool {
         haystack_sum -= *unsafe { haystack.get_unchecked(i - needle.len()) } as usize;
     }
 
-    return false;
+    false
 }
 
 #[cfg(target_feature = "avx2")]
@@ -445,14 +448,14 @@ impl StrStrAVX2Searcher {
             haystack_sum += *haystack.get_unchecked(i) as usize;
             i += 1;
             if haystack_sum == self.needle_sum
-                && &haystack[(i - self.needle.len())..i] == &*self.needle
+                && &haystack[(i - self.needle.len())..i] == self.needle.as_ref()
             {
                 return true;
             }
             haystack_sum -= *haystack.get_unchecked(i - self.needle.len()) as usize;
         }
 
-        return false;
+        false
     }
 }
 

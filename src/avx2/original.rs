@@ -18,8 +18,11 @@ unsafe fn strstr_avx2_original_memcmp(
     let last = _mm256_set1_epi8(*needle.add(k - 1) as i8);
     let mut i = 0;
     while i < n {
+        #[allow(clippy::cast_ptr_alignment)]
         let block_first = _mm256_loadu_si256(haystack.add(i) as *const __m256i);
+        #[allow(clippy::cast_ptr_alignment)]
         let block_last = _mm256_loadu_si256(haystack.add(i + k - 1) as *const __m256i);
+
         let eq_first = _mm256_cmpeq_epi8(first, block_first);
         let eq_last = _mm256_cmpeq_epi8(last, block_last);
 
@@ -46,6 +49,7 @@ unsafe fn strstr_avx2_original_memcmp(
 /// Version copied from https://github.com/WojciechMula/sse4-strstr/blob/master/avx2-strstr-v2.cpp
 /// This version is somewhat not safe because it can read past the end of the haystack slice.
 #[cfg(target_arch = "x86_64")]
+#[allow(clippy::missing_safety_doc)]
 pub unsafe fn strstr_avx2_original(haystack: &[u8], needle: &[u8]) -> bool {
     if haystack.len() < needle.len() {
         return false;
