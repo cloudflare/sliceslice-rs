@@ -91,17 +91,13 @@ pub unsafe fn strstr_avx2_rust_simple_2(haystack: &[u8], needle: &[u8]) -> bool 
 
     let chunk = chunks.remainder();
 
-    if chunk.len() > 0 {
+    if needle.len() <= chunk.len() {
         let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
         block_pad[..chunk.len()].copy_from_slice(chunk);
         let block_first = _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i);
-        let block_last = if i + 31 + needle.len() <= haystack.len() {
-            _mm256_loadu_si256(chunk[(needle.len() - 1)..].as_ptr() as *const __m256i)
-        } else {
-            let start = &haystack[(i + needle.len() - 1)..];
-            block_pad[..start.len()].copy_from_slice(start);
-            _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i)
-        };
+        let start = &haystack[(i + needle.len() - 1)..];
+        block_pad[..start.len()].copy_from_slice(start);
+        let block_last = _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i);
 
         let eq_first = _mm256_cmpeq_epi8(first, block_first);
         let eq_last = _mm256_cmpeq_epi8(last, block_last);
@@ -252,17 +248,13 @@ unsafe fn strstr_avx2_rust_fast_2_memcmp(
 
     let chunk = chunks.remainder();
 
-    if chunk.len() > 0 {
+    if needle.len() <= chunk.len() {
         let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
         block_pad[..chunk.len()].copy_from_slice(chunk);
         let block_first = _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i);
-        let block_last = if i + 31 + needle.len() <= haystack.len() {
-            _mm256_loadu_si256(chunk[(needle.len() - 1)..].as_ptr() as *const __m256i)
-        } else {
-            let start = &haystack[(i + needle.len() - 1)..];
-            block_pad[..start.len()].copy_from_slice(start);
-            _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i)
-        };
+        let start = &haystack[(i + needle.len() - 1)..];
+        block_pad[..start.len()].copy_from_slice(start);
+        let block_last = _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i);
 
         let eq_first = _mm256_cmpeq_epi8(first, block_first);
         let eq_last = _mm256_cmpeq_epi8(last, block_last);
