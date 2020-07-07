@@ -6,17 +6,6 @@ mod memcmp;
 mod tests {
     use std::fs::File;
     use std::io::{self, BufRead, Read};
-    use std::path::Path;
-
-    // The output is wrapped in a Result to allow matching on errors
-    // Returns an Iterator to the Reader of the lines of the file.
-    fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-    where
-        P: AsRef<Path>,
-    {
-        let file = File::open(filename)?;
-        Ok(io::BufReader::new(file).lines())
-    }
 
     #[test]
     #[cfg(target_arch = "x86_64")]
@@ -28,36 +17,77 @@ mod tests {
         f.read_to_end(&mut buffer).unwrap();
         let content = String::from_utf8_lossy(&buffer);
 
-        let lines = read_lines("./data/words").unwrap();
-        for line in lines {
-            if let Ok(word) = line {
-                if word.len() > 1 {
-                    let found = content.find(&word).is_some();
-                    assert_eq!(
-                        unsafe { strstr_avx2_original(content.as_bytes(), word.as_bytes()) },
-                        found
-                    );
-                    assert_eq!(
-                        unsafe { strstr_avx2_rust_simple(content.as_bytes(), word.as_bytes()) },
-                        found
-                    );
-                    assert_eq!(
-                        unsafe { strstr_avx2_rust_simple_2(content.as_bytes(), word.as_bytes()) },
-                        found
-                    );
-                    assert_eq!(
-                        unsafe { strstr_avx2_rust_fast(content.as_bytes(), word.as_bytes()) },
-                        found
-                    );
-                    assert_eq!(
-                        strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes()),
-                        found
-                    );
-                    assert_eq!(
-                        unsafe { strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes()) },
-                        found
-                    );
-                }
+        let file = File::open("./data/words").unwrap();
+        let mut words: Vec<String> = io::BufReader::new(file)
+            .lines()
+            .filter_map(|line| line.ok())
+            .filter(|word| word.len() > 1)
+            .collect();
+        // Sort all words by length then lexicographically
+        words.sort_by(|a, b| {
+            if a.len() != b.len() {
+                a.len().partial_cmp(&b.len()).unwrap()
+            } else {
+                a.partial_cmp(b).unwrap()
+            }
+        });
+        let words = words;
+
+        for word in &words {
+            let found = content.find(word).is_some();
+            assert_eq!(
+                unsafe { strstr_avx2_original(content.as_bytes(), word.as_bytes()) },
+                found
+            );
+            assert_eq!(
+                unsafe { strstr_avx2_rust_simple(content.as_bytes(), word.as_bytes()) },
+                found
+            );
+            assert_eq!(
+                unsafe { strstr_avx2_rust_simple_2(content.as_bytes(), word.as_bytes()) },
+                found
+            );
+            assert_eq!(
+                unsafe { strstr_avx2_rust_fast(content.as_bytes(), word.as_bytes()) },
+                found
+            );
+            assert_eq!(
+                strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes()),
+                found
+            );
+            assert_eq!(
+                unsafe { strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes()) },
+                found
+            );
+        }
+
+        for (i, word) in words.iter().enumerate() {
+            for content in &words[(i + 1)..] {
+                let found = content.find(word).is_some();
+                assert_eq!(
+                    unsafe { strstr_avx2_original(content.as_bytes(), word.as_bytes()) },
+                    found
+                );
+                assert_eq!(
+                    unsafe { strstr_avx2_rust_simple(content.as_bytes(), word.as_bytes()) },
+                    found
+                );
+                assert_eq!(
+                    unsafe { strstr_avx2_rust_simple_2(content.as_bytes(), word.as_bytes()) },
+                    found
+                );
+                assert_eq!(
+                    unsafe { strstr_avx2_rust_fast(content.as_bytes(), word.as_bytes()) },
+                    found
+                );
+                assert_eq!(
+                    strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes()),
+                    found
+                );
+                assert_eq!(
+                    unsafe { strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes()) },
+                    found
+                );
             }
         }
     }

@@ -4,7 +4,7 @@ use crate::memcmp::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(target_feature = "avx2")]
 pub unsafe fn strstr_avx2_rust_simple(haystack: &[u8], needle: &[u8]) -> bool {
     let first = _mm256_set1_epi8(needle[0] as i8);
     let last = _mm256_set1_epi8(needle[needle.len() - 1] as i8);
@@ -50,7 +50,7 @@ pub unsafe fn strstr_avx2_rust_simple(haystack: &[u8], needle: &[u8]) -> bool {
     false
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(target_feature = "avx2")]
 pub unsafe fn strstr_avx2_rust_simple_2(haystack: &[u8], needle: &[u8]) -> bool {
     let first = _mm256_set1_epi8(needle[0] as i8);
     let last = _mm256_set1_epi8(needle[needle.len() - 1] as i8);
@@ -125,7 +125,7 @@ pub unsafe fn strstr_avx2_rust_simple_2(haystack: &[u8], needle: &[u8]) -> bool 
     false
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(target_feature = "avx2")]
 #[inline(always)]
 unsafe fn strstr_avx2_rust_fast_memcmp(
     haystack: &[u8],
@@ -182,7 +182,7 @@ unsafe fn strstr_avx2_rust_fast_memcmp(
     false
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(target_feature = "avx2")]
 pub unsafe fn strstr_avx2_rust_fast(haystack: &[u8], needle: &[u8]) -> bool {
     match needle.len() {
         0 => true,
@@ -204,7 +204,7 @@ pub unsafe fn strstr_avx2_rust_fast(haystack: &[u8], needle: &[u8]) -> bool {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(target_feature = "avx2")]
 #[inline(always)]
 unsafe fn strstr_avx2_rust_fast_2_memcmp(
     haystack: &[u8],
@@ -289,7 +289,7 @@ unsafe fn strstr_avx2_rust_fast_2_memcmp(
     false
 }
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(target_feature = "avx2")]
 pub fn strstr_avx2_rust_fast_2(haystack: &[u8], needle: &[u8]) -> bool {
     match needle.len() {
         0 => true,
@@ -314,7 +314,7 @@ pub fn strstr_avx2_rust_fast_2(haystack: &[u8], needle: &[u8]) -> bool {
 #[repr(align(32))]
 struct AlignedVector([u8; 32]);
 
-#[cfg(target_arch = "x86_64")]
+#[cfg(target_feature = "avx2")]
 pub unsafe fn strstr_avx2_rust_aligned(haystack: &[u8], needle: &[u8]) -> bool {
     let first = _mm256_set1_epi8(needle[0] as i8);
     let last = _mm256_set1_epi8(needle[needle.len() - 1] as i8);
@@ -326,7 +326,11 @@ pub unsafe fn strstr_avx2_rust_aligned(haystack: &[u8], needle: &[u8]) -> bool {
         let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
         block_pad.0[..chunk.len()].copy_from_slice(chunk);
         let block_first = _mm256_load_si256(block_pad.0.as_ptr() as *const __m256i);
-        let start = &haystack[(i + needle.len() - 1)..(i + 32 + needle.len() - 1)];
+        let start = if i + 31 + needle.len() <= haystack.len() {
+            &haystack[(i + needle.len() - 1)..(i + 32 + needle.len() - 1)]
+        } else {
+            &haystack[(i + needle.len() - 1)..]
+        };
         block_pad.0[..start.len()].copy_from_slice(start);
         let block_last = _mm256_load_si256(block_pad.0.as_ptr() as *const __m256i);
 

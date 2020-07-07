@@ -11,13 +11,22 @@ fn criterion_benchmark(c: &mut Criterion) {
     let content = String::from_utf8_lossy(&buffer);
 
     let file = File::open("./data/words").unwrap();
-    let words: Vec<String> = io::BufReader::new(file)
+    let mut words: Vec<String> = io::BufReader::new(file)
         .lines()
         .filter_map(|line| line.ok())
         .filter(|word| word.len() > 1)
         .collect();
+    // Sort all words by length then lexicographically
+    words.sort_by(|a, b| {
+        if a.len() != b.len() {
+            a.len().partial_cmp(&b.len()).unwrap()
+        } else {
+            a.partial_cmp(b).unwrap()
+        }
+    });
+    let words = words;
 
-    c.bench_function("String::find", |b| {
+    c.bench_function("String::find with long haystack", |b| {
         b.iter(|| {
             for word in &words {
                 content.find(word);
@@ -30,7 +39,9 @@ fn criterion_benchmark(c: &mut Criterion) {
         .map(|word| TwoWaySearcher::new(word.as_bytes()))
         .collect();
 
-    c.bench_function("TwoWaySearcher::search_in", |b| {
+    // Benchmarks against long haystacks
+
+    c.bench_function("TwoWaySearcher::search_in with long haystack", |b| {
         b.iter(|| {
             for twoway_word in &twoway_words {
                 twoway_word.search_in(content.as_bytes());
@@ -38,7 +49,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("strstr_avx2_original", |b| {
+    c.bench_function("strstr_avx2_original with long haystack", |b| {
         b.iter(|| {
             for word in &words {
                 unsafe {
@@ -48,7 +59,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("strstr_avx2_rust_simple", |b| {
+    c.bench_function("strstr_avx2_rust_simple with long haystack", |b| {
         b.iter(|| {
             for word in &words {
                 unsafe {
@@ -58,7 +69,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("strstr_avx2_rust_simple_2", |b| {
+    c.bench_function("strstr_avx2_rust_simple_2 with long haystack", |b| {
         b.iter(|| {
             for word in &words {
                 unsafe {
@@ -68,7 +79,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("strstr_avx2_rust_fast", |b| {
+    c.bench_function("strstr_avx2_rust_fast with long haystack", |b| {
         b.iter(|| {
             for word in &words {
                 unsafe {
@@ -78,7 +89,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("strstr_avx2_rust_fast_2", |b| {
+    c.bench_function("strstr_avx2_rust_fast_2 with long haystack", |b| {
         b.iter(|| {
             for word in &words {
                 strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes());
@@ -86,11 +97,106 @@ fn criterion_benchmark(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("strstr_avx2_rust_aligned", |b| {
+    c.bench_function("strstr_avx2_rust_aligned with long haystack", |b| {
         b.iter(|| {
             for word in &words {
                 unsafe {
                     strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes());
+                }
+            }
+        })
+    });
+
+    // Benchmarks against short haystacks
+    //
+    // Since words are ordered by length, pick a word as needle
+    // and use bigger words as haystacks.
+
+    c.bench_function("String::find with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    content.find(word);
+                }
+            }
+        })
+    });
+
+    c.bench_function("TwoWaySearcher::search_in with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in twoway_words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    word.search_in(content.as_bytes());
+                }
+            }
+        })
+    });
+
+    c.bench_function("strstr_avx2_original with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    unsafe {
+                        strstr_avx2_original(content.as_bytes(), word.as_bytes());
+                    }
+                }
+            }
+        })
+    });
+
+    c.bench_function("strstr_avx2_rust_simple with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    unsafe {
+                        strstr_avx2_rust_simple(content.as_bytes(), word.as_bytes());
+                    }
+                }
+            }
+        })
+    });
+
+    c.bench_function("strstr_avx2_rust_simple_2 with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    unsafe {
+                        strstr_avx2_rust_simple_2(content.as_bytes(), word.as_bytes());
+                    }
+                }
+            }
+        })
+    });
+
+    c.bench_function("strstr_avx2_rust_fast with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    unsafe {
+                        strstr_avx2_rust_fast(content.as_bytes(), word.as_bytes());
+                    }
+                }
+            }
+        })
+    });
+
+    c.bench_function("strstr_avx2_rust_fast_2 with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes());
+                }
+            }
+        })
+    });
+
+    c.bench_function("strstr_avx2_rust_aligned with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    unsafe {
+                        strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes());
+                    }
                 }
             }
         })

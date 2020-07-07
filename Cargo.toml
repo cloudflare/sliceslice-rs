@@ -16,3 +16,6 @@ memmem = "0.1"
 [[bench]]
 name = "avx2_anysize"
 harness = false
+
+[profile.release]
+debug = true
