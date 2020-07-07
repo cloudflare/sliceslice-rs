@@ -299,8 +299,10 @@ pub fn strstr_avx2_rust_fast_2(haystack: &[u8], needle: &[u8]) -> bool {
 #[cfg(target_feature = "avx2")]
 pub struct StrStrAVX2Searcher {
     needle: Box<[u8]>,
-    first: __m256i,
-    last: __m256i,
+    sse_first: __m128i,
+    sse_last: __m128i,
+    avx2_first: __m256i,
+    avx2_last: __m256i,
     needle_sum: usize,
 }
 
@@ -313,8 +315,10 @@ impl StrStrAVX2Searcher {
         }
         StrStrAVX2Searcher {
             needle: needle.to_vec().into_boxed_slice(),
-            first: unsafe { _mm256_set1_epi8(needle[0] as i8) },
-            last: unsafe { _mm256_set1_epi8(needle[needle.len() - 1] as i8) },
+            sse_first: unsafe { _mm_set1_epi8(needle[0] as i8) },
+            sse_last: unsafe { _mm_set1_epi8(needle[needle.len() - 1] as i8) },
+            avx2_first: unsafe { _mm256_set1_epi8(needle[0] as i8) },
+            avx2_last: unsafe { _mm256_set1_epi8(needle[needle.len() - 1] as i8) },
             needle_sum,
         }
     }
@@ -344,9 +348,52 @@ impl StrStrAVX2Searcher {
     }
 
     #[inline(always)]
+    unsafe fn sse_memcmp(&self, haystack: &[u8], memcmp: unsafe fn(&[u8], &[u8]) -> bool) -> bool {
+        if haystack.len() < 16 {
+            return self.rabin_karp(haystack);
+        }
+        let mut chunks = haystack[..=(haystack.len() - self.needle.len())].chunks_exact(16);
+        while let Some(chunk) = chunks.next() {
+            let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
+            let block_first = _mm_loadu_si128(chunk.as_ptr() as *const __m128i);
+            let block_last =
+                _mm_loadu_si128(chunk.as_ptr().add(self.needle.len() - 1) as *const __m128i);
+
+            let eq_first = _mm_cmpeq_epi8(self.sse_first, block_first);
+            let eq_last = _mm_cmpeq_epi8(self.sse_last, block_last);
+
+            let mut mask = std::mem::transmute::<i32, u32>(_mm_movemask_epi8(_mm_and_si128(
+                eq_first, eq_last,
+            )));
+            while mask != 0 {
+                let bitpos = mask.trailing_zeros() as usize;
+                let startpos = i + bitpos;
+                if startpos + self.needle.len() <= haystack.len()
+                    && memcmp(
+                        &haystack[(startpos + 1)..(startpos + self.needle.len() - 1)],
+                        &self.needle[1..self.needle.len() - 1],
+                    )
+                {
+                    return true;
+                }
+                mask = clear_leftmost_set(mask);
+            }
+        }
+
+        let chunk = chunks.remainder();
+        let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
+        let chunk = &haystack[i..];
+        if !chunk.is_empty() {
+            self.rabin_karp(chunk)
+        } else {
+            false
+        }
+    }
+
+    #[inline(always)]
     unsafe fn avx2_memcmp(&self, haystack: &[u8], memcmp: unsafe fn(&[u8], &[u8]) -> bool) -> bool {
         if haystack.len() < 32 {
-            return self.rabin_karp(haystack);
+            return self.sse_memcmp(haystack, memcmp);
         }
         let mut chunks = haystack[..=(haystack.len() - self.needle.len())].chunks_exact(32);
         while let Some(chunk) = chunks.next() {
@@ -355,8 +402,8 @@ impl StrStrAVX2Searcher {
             let block_last =
                 _mm256_loadu_si256(chunk.as_ptr().add(self.needle.len() - 1) as *const __m256i);
 
-            let eq_first = _mm256_cmpeq_epi8(self.first, block_first);
-            let eq_last = _mm256_cmpeq_epi8(self.last, block_last);
+            let eq_first = _mm256_cmpeq_epi8(self.avx2_first, block_first);
+            let eq_last = _mm256_cmpeq_epi8(self.avx2_last, block_last);
 
             let mut mask = std::mem::transmute::<i32, u32>(_mm256_movemask_epi8(_mm256_and_si256(
                 eq_first, eq_last,
@@ -380,7 +427,7 @@ impl StrStrAVX2Searcher {
         let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
         let chunk = &haystack[i..];
         if !chunk.is_empty() {
-            self.rabin_karp(chunk)
+            self.sse_memcmp(chunk, memcmp)
         } else {
             false
         }
