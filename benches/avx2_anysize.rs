@@ -26,6 +26,18 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
     let words = words;
 
+    let twoway_words: Vec<TwoWaySearcher<'_>> = words
+        .iter()
+        .map(|word| TwoWaySearcher::new(word.as_bytes()))
+        .collect();
+
+    let avx2_words: Vec<StrStrAVX2Searcher> = words
+        .iter()
+        .map(|word| StrStrAVX2Searcher::new(word.as_bytes()))
+        .collect();
+
+    // Benchmarks against long haystacks
+
     c.bench_function("String::find with long haystack", |b| {
         b.iter(|| {
             for word in &words {
@@ -33,13 +45,6 @@ fn criterion_benchmark(c: &mut Criterion) {
             }
         })
     });
-
-    let twoway_words: Vec<TwoWaySearcher<'_>> = words
-        .iter()
-        .map(|word| TwoWaySearcher::new(word.as_bytes()))
-        .collect();
-
-    // Benchmarks against long haystacks
 
     c.bench_function("TwoWaySearcher::search_in with long haystack", |b| {
         b.iter(|| {
@@ -103,6 +108,14 @@ fn criterion_benchmark(c: &mut Criterion) {
                 unsafe {
                     strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes());
                 }
+            }
+        })
+    });
+
+    c.bench_function("StrStrAVX2Searcher::search_in with long haystack", |b| {
+        b.iter(|| {
+            for avx2_word in &avx2_words {
+                avx2_word.search_in(content.as_bytes());
             }
         })
     });
@@ -197,6 +210,16 @@ fn criterion_benchmark(c: &mut Criterion) {
                     unsafe {
                         strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes());
                     }
+                }
+            }
+        })
+    });
+
+    c.bench_function("StrStrAVX2Searcher::search_in with short haystack", |b| {
+        b.iter(|| {
+            for (i, word) in avx2_words.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    word.search_in(content.as_bytes());
                 }
             }
         })
