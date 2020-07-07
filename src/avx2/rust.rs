@@ -207,23 +207,16 @@ unsafe fn strstr_avx2_rust_fast_2_memcmp(
     needle: &[u8],
     memcmp: unsafe fn(&[u8], &[u8]) -> bool,
 ) -> bool {
+    if haystack.len() < 32 {
+        return strstr_rabin_karp(haystack, needle);
+    }
     let first = _mm256_set1_epi8(needle[0] as i8);
     let last = _mm256_set1_epi8(needle[needle.len() - 1] as i8);
-    let mut block_pad: [u8; 32] = [
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0,
-    ];
-    let mut chunks = haystack.chunks_exact(32);
+    let mut chunks = haystack[..=(haystack.len() - needle.len())].chunks_exact(32);
     while let Some(chunk) = chunks.next() {
         let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
         let block_first = _mm256_loadu_si256(chunk.as_ptr() as *const __m256i);
-        let block_last = if i + 31 + needle.len() <= haystack.len() {
-            _mm256_loadu_si256(chunk[(needle.len() - 1)..].as_ptr() as *const __m256i)
-        } else {
-            let start = &haystack[(i + needle.len() - 1)..];
-            block_pad[..start.len()].copy_from_slice(start);
-            _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i)
-        };
+        let block_last = _mm256_loadu_si256(chunk.as_ptr().add(needle.len() - 1) as *const __m256i);
 
         let eq_first = _mm256_cmpeq_epi8(first, block_first);
         let eq_last = _mm256_cmpeq_epi8(last, block_last);
@@ -247,38 +240,38 @@ unsafe fn strstr_avx2_rust_fast_2_memcmp(
     }
 
     let chunk = chunks.remainder();
-
+    let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
+    let chunk = &haystack[i..];
     if needle.len() <= chunk.len() {
-        let i = chunk.as_ptr() as usize - haystack.as_ptr() as usize;
-        block_pad[..chunk.len()].copy_from_slice(chunk);
-        let block_first = _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i);
-        let start = &haystack[(i + needle.len() - 1)..];
-        block_pad[..start.len()].copy_from_slice(start);
-        let block_last = _mm256_loadu_si256(block_pad.as_ptr() as *const __m256i);
+        strstr_rabin_karp(chunk, needle)
+    } else {
+        false
+    }
+}
 
-        let eq_first = _mm256_cmpeq_epi8(first, block_first);
-        let eq_last = _mm256_cmpeq_epi8(last, block_last);
-
-        let mut mask = std::mem::transmute::<i32, u32>(_mm256_movemask_epi8(_mm256_and_si256(
-            eq_first, eq_last,
-        )));
-
-        while mask != 0 {
-            let bitpos = mask.trailing_zeros() as usize;
-            let startpos = i + bitpos;
-            if startpos + needle.len() <= haystack.len()
-                && memcmp(
-                    &haystack[(startpos + 1)..(startpos + needle.len() - 1)],
-                    &needle[1..needle.len() - 1],
-                )
-            {
-                return true;
-            }
-            mask = clear_leftmost_set(mask);
-        }
+#[inline(always)]
+fn strstr_rabin_karp(haystack: &[u8], needle: &[u8]) -> bool {
+    let mut needle_sum = 0;
+    for c in needle {
+        needle_sum += c;
     }
 
-    false
+    let mut haystack_sum = 0;
+    for c in &haystack[..needle.len() - 1] {
+        haystack_sum += c;
+    }
+
+    let mut i = needle.len() - 1;
+    while i < haystack.len() {
+        haystack_sum += unsafe { haystack.get_unchecked(i) };
+        i += 1;
+        if haystack_sum == needle_sum && &haystack[(i - needle.len())..i] == needle {
+            return true;
+        }
+        haystack_sum -= unsafe { haystack.get_unchecked(i - needle.len()) };
+    }
+
+    return false;
 }
 
 #[cfg(target_feature = "avx2")]
