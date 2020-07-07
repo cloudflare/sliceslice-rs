@@ -81,9 +81,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("strstr_avx2_rust_fast_2", |b| {
         b.iter(|| {
             for word in &words {
-                unsafe {
-                    strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes());
-                }
+                strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes());
             }
         })
     });

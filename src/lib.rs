@@ -50,7 +50,7 @@ mod tests {
                         found
                     );
                     assert_eq!(
-                        unsafe { strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes()) },
+                        strstr_avx2_rust_fast_2(content.as_bytes(), word.as_bytes()),
                         found
                     );
                     assert_eq!(

@@ -36,9 +36,10 @@ pub unsafe fn strstr_avx2_rust_simple(haystack: &[u8], needle: &[u8]) -> bool {
         )));
         while mask != 0 {
             let bitpos = mask.trailing_zeros() as usize;
-            let startpos = i + bitpos + 1;
+            let startpos = i + bitpos;
             if startpos + needle.len() <= haystack.len()
-                && haystack[startpos..startpos + needle.len() - 2] == needle[1..needle.len() - 1]
+                && haystack[(startpos + 1)..(startpos + needle.len() - 1)]
+                    == needle[1..needle.len() - 1]
             {
                 return true;
             }
@@ -77,9 +78,10 @@ pub unsafe fn strstr_avx2_rust_simple_2(haystack: &[u8], needle: &[u8]) -> bool 
         )));
         while mask != 0 {
             let bitpos = mask.trailing_zeros() as usize;
-            let startpos = i + bitpos + 1;
-            if startpos + needle.len() - 2 <= haystack.len()
-                && haystack[startpos..startpos + needle.len() - 2] == needle[1..needle.len() - 1]
+            let startpos = i + bitpos;
+            if startpos + needle.len() <= haystack.len()
+                && haystack[(startpos + 1)..(startpos + needle.len() - 1)]
+                    == needle[1..needle.len() - 1]
             {
                 return true;
             }
@@ -109,9 +111,10 @@ pub unsafe fn strstr_avx2_rust_simple_2(haystack: &[u8], needle: &[u8]) -> bool 
         )));
         while mask != 0 {
             let bitpos = mask.trailing_zeros() as usize;
-            let startpos = i + bitpos + 1;
+            let startpos = i + bitpos;
             if startpos + needle.len() <= haystack.len()
-                && haystack[startpos..startpos + needle.len() - 2] == needle[1..needle.len() - 1]
+                && haystack[(startpos + 1)..(startpos + needle.len() - 1)]
+                    == needle[1..needle.len() - 1]
             {
                 return true;
             }
@@ -163,10 +166,10 @@ unsafe fn strstr_avx2_rust_fast_memcmp(
         )));
         while mask != 0 {
             let bitpos = mask.trailing_zeros() as usize;
-            let startpos = i + bitpos + 1;
+            let startpos = i + bitpos;
             if startpos + needle.len() <= haystack.len()
                 && memcmp(
-                    &haystack[startpos..startpos + needle.len() - 2],
+                    &haystack[(startpos + 1)..(startpos + needle.len() - 1)],
                     &needle[1..needle.len() - 1],
                 )
             {
@@ -234,10 +237,10 @@ unsafe fn strstr_avx2_rust_fast_2_memcmp(
         )));
         while mask != 0 {
             let bitpos = mask.trailing_zeros() as usize;
-            let startpos = i + bitpos + 1;
+            let startpos = i + bitpos;
             if startpos + needle.len() <= haystack.len()
                 && memcmp(
-                    &haystack[startpos..startpos + needle.len() - 2],
+                    &haystack[(startpos + 1)..(startpos + needle.len() - 1)],
                     &needle[1..needle.len() - 1],
                 )
             {
@@ -267,12 +270,13 @@ unsafe fn strstr_avx2_rust_fast_2_memcmp(
         let mut mask = std::mem::transmute::<i32, u32>(_mm256_movemask_epi8(_mm256_and_si256(
             eq_first, eq_last,
         )));
+
         while mask != 0 {
             let bitpos = mask.trailing_zeros() as usize;
-            let startpos = i + bitpos + 1;
+            let startpos = i + bitpos;
             if startpos + needle.len() <= haystack.len()
                 && memcmp(
-                    &haystack[startpos..startpos + needle.len() - 2],
+                    &haystack[(startpos + 1)..(startpos + needle.len() - 1)],
                     &needle[1..needle.len() - 1],
                 )
             {
@@ -286,24 +290,24 @@ unsafe fn strstr_avx2_rust_fast_2_memcmp(
 }
 
 #[cfg(target_arch = "x86_64")]
-pub unsafe fn strstr_avx2_rust_fast_2(haystack: &[u8], needle: &[u8]) -> bool {
+pub fn strstr_avx2_rust_fast_2(haystack: &[u8], needle: &[u8]) -> bool {
     match needle.len() {
         0 => true,
         1 => memchr::memchr(needle[0], haystack).is_some(),
-        2 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp0),
-        3 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp1),
-        4 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp2),
-        5 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp4),
-        6 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp4),
-        7 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp5),
-        8 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp6),
-        9 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp8),
-        10 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp8),
-        11 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp9),
-        12 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp10),
-        13 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp11),
-        14 => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp12),
-        _ => strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp),
+        2 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp0) },
+        3 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp1) },
+        4 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp2) },
+        5 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp4) },
+        6 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp4) },
+        7 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp5) },
+        8 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp6) },
+        9 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp8) },
+        10 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp8) },
+        11 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp9) },
+        12 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp10) },
+        13 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp11) },
+        14 => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp12) },
+        _ => unsafe { strstr_avx2_rust_fast_2_memcmp(haystack, needle, memcmp) },
     }
 }
 
@@ -334,9 +338,10 @@ pub unsafe fn strstr_avx2_rust_aligned(haystack: &[u8], needle: &[u8]) -> bool {
         )));
         while mask != 0 {
             let bitpos = mask.trailing_zeros() as usize;
-            let startpos = i + bitpos + 1;
+            let startpos = i + bitpos;
             if startpos + needle.len() <= haystack.len()
-                && haystack[startpos..startpos + needle.len() - 2] == needle[1..needle.len() - 1]
+                && haystack[(startpos + 1)..(startpos + needle.len() - 1)]
+                    == needle[1..needle.len() - 1]
             {
                 return true;
             }
@@ -345,4 +350,40 @@ pub unsafe fn strstr_avx2_rust_aligned(haystack: &[u8], needle: &[u8]) -> bool {
     }
 
     false
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_needle_length_3() {
+        use super::strstr_avx2_rust_fast_2;
+
+        let mut input = [0; 32];
+
+        for i in 0..=(input.len() - 3) {
+            input = [b'A'; 32];
+            input[i..(i + 3)].copy_from_slice(&[b'B'; 3]);
+            assert_eq!(
+                strstr_avx2_rust_fast_2(&input[..], b"BBB"),
+                true,
+                "{:?} should contain {:?}",
+                &input[..],
+                b"BBB"
+            );
+        }
+
+        let mut input = [0; 63];
+
+        for i in 0..=(input.len() - 3) {
+            input = [b'A'; 63];
+            input[i..(i + 3)].copy_from_slice(&[b'B'; 3]);
+            assert_eq!(
+                strstr_avx2_rust_fast_2(&input[..], b"BBB"),
+                true,
+                "{:?} should contain {:?}",
+                &input[..],
+                b"BBB"
+            );
+        }
+    }
 }
