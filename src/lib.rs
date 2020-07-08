@@ -59,6 +59,10 @@ mod tests {
                 unsafe { strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes()) },
                 found
             );
+            assert_eq!(
+                StrStrAVX2Searcher::new(word.as_bytes()).search_in(content.as_bytes()),
+                found
+            );
         }
 
         for (i, word) in words.iter().enumerate() {
@@ -86,6 +90,10 @@ mod tests {
                 );
                 assert_eq!(
                     unsafe { strstr_avx2_rust_aligned(content.as_bytes(), word.as_bytes()) },
+                    found
+                );
+                assert_eq!(
+                    StrStrAVX2Searcher::new(word.as_bytes()).search_in(content.as_bytes()),
                     found
                 );
             }
