@@ -251,24 +251,24 @@ unsafe fn strstr_avx2_rust_fast_2_memcmp(
 
 #[inline(always)]
 fn strstr_rabin_karp(haystack: &[u8], needle: &[u8]) -> bool {
-    let mut needle_sum = 0;
-    for c in needle {
-        needle_sum += c;
+    let mut needle_sum = 0_usize;
+    for &c in needle {
+        needle_sum += c as usize;
     }
 
-    let mut haystack_sum = 0;
-    for c in &haystack[..needle.len() - 1] {
-        haystack_sum += c;
+    let mut haystack_sum = 0_usize;
+    for &c in &haystack[..needle.len() - 1] {
+        haystack_sum += c as usize;
     }
 
     let mut i = needle.len() - 1;
     while i < haystack.len() {
-        haystack_sum += unsafe { haystack.get_unchecked(i) };
+        haystack_sum += *unsafe { haystack.get_unchecked(i) } as usize;
         i += 1;
         if haystack_sum == needle_sum && &haystack[(i - needle.len())..i] == needle {
             return true;
         }
-        haystack_sum -= unsafe { haystack.get_unchecked(i - needle.len()) };
+        haystack_sum -= *unsafe { haystack.get_unchecked(i - needle.len()) } as usize;
     }
 
     return false;
