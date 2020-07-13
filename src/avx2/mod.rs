@@ -6,16 +6,14 @@ pub use self::{original::*, rust::*};
 use crate::{bits, memchr::MemchrSearcher, memcmp};
 use std::{
     arch::x86_64::*,
+    mem,
     ops::{AddAssign, SubAssign},
 };
 
-const AVX2_LANES: usize = 32;
-const SSE2_LANES: usize = 16;
-
 #[derive(Clone, Copy, Default, PartialEq)]
-struct Hash(usize);
+struct ScalarHash(usize);
 
-impl From<&[u8]> for Hash {
+impl From<&[u8]> for ScalarHash {
     #[inline(always)]
     fn from(bytes: &[u8]) -> Self {
         bytes.iter().fold(Default::default(), |mut hash, &b| {
@@ -25,17 +23,97 @@ impl From<&[u8]> for Hash {
     }
 }
 
-impl AddAssign<u8> for Hash {
+impl AddAssign<u8> for ScalarHash {
     #[inline(always)]
     fn add_assign(&mut self, b: u8) {
         self.0 += usize::from(b);
     }
 }
 
-impl SubAssign<u8> for Hash {
+impl SubAssign<u8> for ScalarHash {
     #[inline(always)]
     fn sub_assign(&mut self, b: u8) {
         self.0 -= usize::from(b);
+    }
+}
+
+trait Vector: Copy {
+    unsafe fn set1_epi8(a: i8) -> Self;
+
+    unsafe fn loadu_si(a: *const Self) -> Self;
+
+    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self;
+
+    unsafe fn and_si(a: Self, b: Self) -> Self;
+
+    unsafe fn movemask_epi8(a: Self) -> i32;
+}
+
+impl Vector for __m128i {
+    #[inline(always)]
+    unsafe fn set1_epi8(a: i8) -> Self {
+        _mm_set1_epi8(a)
+    }
+
+    #[inline(always)]
+    unsafe fn loadu_si(a: *const Self) -> Self {
+        _mm_loadu_si128(a)
+    }
+
+    #[inline(always)]
+    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+        _mm_cmpeq_epi8(a, b)
+    }
+
+    #[inline(always)]
+    unsafe fn and_si(a: Self, b: Self) -> Self {
+        _mm_and_si128(a, b)
+    }
+
+    #[inline(always)]
+    unsafe fn movemask_epi8(a: Self) -> i32 {
+        _mm_movemask_epi8(a)
+    }
+}
+
+impl Vector for __m256i {
+    #[inline(always)]
+    unsafe fn set1_epi8(a: i8) -> Self {
+        _mm256_set1_epi8(a)
+    }
+
+    #[inline(always)]
+    unsafe fn loadu_si(a: *const Self) -> Self {
+        _mm256_loadu_si256(a)
+    }
+
+    #[inline(always)]
+    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+        _mm256_cmpeq_epi8(a, b)
+    }
+
+    #[inline(always)]
+    unsafe fn and_si(a: Self, b: Self) -> Self {
+        _mm256_and_si256(a, b)
+    }
+
+    #[inline(always)]
+    unsafe fn movemask_epi8(a: Self) -> i32 {
+        _mm256_movemask_epi8(a)
+    }
+}
+
+struct VectorHash<V: Vector> {
+    first: V,
+    last: V,
+}
+
+impl<V: Vector> VectorHash<V> {
+    fn new(first: u8, last: u8) -> Self {
+        Self {
+            first: unsafe { Vector::set1_epi8(first as i8) },
+            last: unsafe { Vector::set1_epi8(last as i8) },
+        }
     }
 }
 
@@ -44,11 +122,9 @@ macro_rules! avx2_searcher {
         pub struct $name {
             needle: Box<[u8]>,
             position: usize,
-            hash: Hash,
-            sse2_first: __m128i,
-            sse2_last: __m128i,
-            avx2_first: __m256i,
-            avx2_last: __m256i,
+            scalar_hash: ScalarHash,
+            sse2_hash: VectorHash<__m128i>,
+            avx2_hash: VectorHash<__m256i>,
         }
 
         impl $name {
@@ -61,20 +137,16 @@ macro_rules! avx2_searcher {
                 assert!(!needle.is_empty());
                 assert!(position < needle.len());
 
-                let hash = Hash::from(needle.as_ref());
-                let sse2_first = unsafe { _mm_set1_epi8(needle[0] as i8) };
-                let sse2_last = unsafe { _mm_set1_epi8(needle[position] as i8) };
-                let avx2_first = unsafe { _mm256_set1_epi8(needle[0] as i8) };
-                let avx2_last = unsafe { _mm256_set1_epi8(needle[position] as i8) };
+                let scalar_hash = ScalarHash::from(needle.as_ref());
+                let sse2_hash = VectorHash::new(needle[0], needle[position]);
+                let avx2_hash = VectorHash::new(needle[0], needle[position]);
 
                 Self {
                     needle,
                     position,
-                    hash,
-                    sse2_first,
-                    sse2_last,
-                    avx2_first,
-                    avx2_last,
+                    scalar_hash,
+                    sse2_hash,
+                    avx2_hash,
                 }
             }
 
@@ -93,14 +165,14 @@ macro_rules! avx2_searcher {
                 debug_assert!(haystack.len() >= self.size());
 
                 let mut end = self.size() - 1;
-                let mut hash = Hash::from(&haystack[..end]);
+                let mut hash = ScalarHash::from(&haystack[..end]);
 
                 while end < haystack.len() {
                     hash += *unsafe { haystack.get_unchecked(end) };
                     end += 1;
 
                     let start = end - self.size();
-                    if hash == self.hash && haystack[start..end] == *self.needle {
+                    if hash == self.scalar_hash && haystack[start..end] == *self.needle {
                         return true;
                     }
 
@@ -111,22 +183,28 @@ macro_rules! avx2_searcher {
             }
 
             #[inline(always)]
-            fn sse2_search_in(&self, haystack: &[u8]) -> bool {
-                if haystack.len() < SSE2_LANES {
-                    return self.scalar_search_in(haystack);
+            fn vector_search_in<V: Vector>(
+                &self,
+                haystack: &[u8],
+                hash: &VectorHash<V>,
+                next: fn(&Self, &[u8]) -> bool,
+            ) -> bool {
+                let lanes = mem::size_of::<V>();
+                if haystack.len() < lanes {
+                    return next(self, haystack);
                 }
 
-                let mut chunks = haystack[..=haystack.len() - self.size()].chunks_exact(SSE2_LANES);
+                let mut chunks = haystack[..=haystack.len() - self.size()].chunks_exact(lanes);
                 while let Some(chunk) = chunks.next() {
                     let start = chunk.as_ptr();
-                    let first = unsafe { _mm_loadu_si128(start.cast()) };
-                    let last = unsafe { _mm_loadu_si128(start.add(self.position).cast()) };
+                    let first = unsafe { Vector::loadu_si(start.cast()) };
+                    let last = unsafe { Vector::loadu_si(start.add(self.position).cast()) };
 
-                    let mask_first = unsafe { _mm_cmpeq_epi8(self.sse2_first, first) };
-                    let mask_last = unsafe { _mm_cmpeq_epi8(self.sse2_last, last) };
+                    let mask_first = unsafe { Vector::cmpeq_epi8(hash.first, first) };
+                    let mask_last = unsafe { Vector::cmpeq_epi8(hash.last, last) };
 
-                    let mask = unsafe { _mm_and_si128(mask_first, mask_last) };
-                    let mut mask = unsafe { _mm_movemask_epi8(mask) } as u32;
+                    let mask = unsafe { Vector::and_si(mask_first, mask_last) };
+                    let mut mask = unsafe { Vector::movemask_epi8(mask) } as u32;
 
                     let start = start as usize - haystack.as_ptr() as usize;
                     while mask != 0 {
@@ -140,46 +218,20 @@ macro_rules! avx2_searcher {
                 }
 
                 let remainder = chunks.remainder();
-                debug_assert!(remainder.len() < SSE2_LANES);
+                debug_assert!(remainder.len() < lanes);
 
                 let chunk = &haystack[remainder.as_ptr() as usize - haystack.as_ptr() as usize..];
-                self.scalar_search_in(chunk)
+                next(self, chunk)
+            }
+
+            #[inline(always)]
+            fn sse2_search_in(&self, haystack: &[u8]) -> bool {
+                self.vector_search_in(haystack, &self.sse2_hash, Self::scalar_search_in)
             }
 
             #[inline(always)]
             fn avx2_search_in(&self, haystack: &[u8]) -> bool {
-                if haystack.len() < AVX2_LANES {
-                    return self.sse2_search_in(haystack);
-                }
-
-                let mut chunks = haystack[..=haystack.len() - self.size()].chunks_exact(AVX2_LANES);
-                while let Some(chunk) = chunks.next() {
-                    let start = chunk.as_ptr();
-                    let first = unsafe { _mm256_loadu_si256(start.cast()) };
-                    let last = unsafe { _mm256_loadu_si256(start.add(self.position).cast()) };
-
-                    let mask_first = unsafe { _mm256_cmpeq_epi8(self.avx2_first, first) };
-                    let mask_last = unsafe { _mm256_cmpeq_epi8(self.avx2_last, last) };
-
-                    let mask = unsafe { _mm256_and_si256(mask_first, mask_last) };
-                    let mut mask = unsafe { _mm256_movemask_epi8(mask) } as u32;
-
-                    let start = start as usize - haystack.as_ptr() as usize;
-                    while mask != 0 {
-                        let chunk = &haystack[start + mask.trailing_zeros() as usize..];
-                        if unsafe { $memcmp(&chunk[1..self.size()], &self.needle[1..]) } {
-                            return true;
-                        }
-
-                        mask = bits::clear_leftmost_set(mask);
-                    }
-                }
-
-                let remainder = chunks.remainder();
-                debug_assert!(remainder.len() < AVX2_LANES);
-
-                let chunk = &haystack[remainder.as_ptr() as usize - haystack.as_ptr() as usize..];
-                self.sse2_search_in(chunk)
+                self.vector_search_in(haystack, &self.avx2_hash, Self::sse2_search_in)
             }
 
             #[inline(always)]
