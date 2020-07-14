@@ -1,31 +1,31 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use memmem::{Searcher, TwoWaySearcher};
-use std::str;
 use strstr::avx2::*;
 
-fn criterion_benchmark(c: &mut Criterion) {
-    let haystack = include_bytes!("../data/haystack");
-    let needle = include_bytes!("../data/needle");
+fn search(c: &mut Criterion) {
+    let haystack = include_str!("../data/haystack");
+    let needle = include_str!("../data/needle");
 
     let sizes = [1, 5, 10, 20, 50, 100, 1000];
 
     for (i, &size) in sizes.iter().enumerate() {
-        let mut group = c.benchmark_group(format!("{}-byte needle", size));
+        let mut group = c.benchmark_group(format!("needle_{}_bytes", size));
         let needle = &needle[..size];
 
         for &size in &sizes[i..] {
-            let parameter = &format!("{}-byte haystack", size);
+            let parameter = &format!("haystack_{}_bytes", size);
             let haystack = &haystack[..size];
 
             group.bench_with_input(
                 BenchmarkId::new("String::find", parameter),
                 &size,
                 |b, _| {
-                    let haystack = str::from_utf8(haystack).unwrap();
-                    let needle = str::from_utf8(needle).unwrap();
                     b.iter(|| haystack.find(needle));
                 },
             );
+
+            let haystack = haystack.as_bytes();
+            let needle = needle.as_bytes();
 
             group.bench_with_input(
                 BenchmarkId::new("TwoWaySearcher::search_in", parameter),
@@ -115,5 +115,5 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, criterion_benchmark);
+criterion_group!(benches, search);
 criterion_main!(benches);

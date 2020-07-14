@@ -16,7 +16,11 @@ memmem = "0.1"
 twoway = "0.2"
 
 [[bench]]
-name = "avx2_anysize"
+name = "i386"
+harness = false
+
+[[bench]]
+name = "random"
 harness = false
 
 [profile.release]
