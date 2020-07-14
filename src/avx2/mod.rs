@@ -4,11 +4,7 @@ mod rust;
 pub use self::{original::*, rust::*};
 
 use crate::{bits, memchr::MemchrSearcher, memcmp};
-use std::{
-    arch::x86_64::*,
-    mem,
-    ops::{AddAssign, SubAssign},
-};
+use std::{arch::x86_64::*, mem};
 
 #[derive(Clone, Copy, Default, PartialEq)]
 struct ScalarHash(usize);
@@ -17,23 +13,21 @@ impl From<&[u8]> for ScalarHash {
     #[inline(always)]
     fn from(bytes: &[u8]) -> Self {
         bytes.iter().fold(Default::default(), |mut hash, &b| {
-            hash += b;
+            hash.push(b);
             hash
         })
     }
 }
 
-impl AddAssign<u8> for ScalarHash {
+impl ScalarHash {
     #[inline(always)]
-    fn add_assign(&mut self, b: u8) {
-        self.0 += usize::from(b);
+    fn push(&mut self, b: u8) {
+        self.0 ^= usize::from(b);
     }
-}
 
-impl SubAssign<u8> for ScalarHash {
     #[inline(always)]
-    fn sub_assign(&mut self, b: u8) {
-        self.0 -= usize::from(b);
+    fn pop(&mut self, b: u8) {
+        self.0 ^= usize::from(b);
     }
 }
 
@@ -167,7 +161,7 @@ macro_rules! avx2_searcher {
                 let mut hash = ScalarHash::from(&haystack[..end]);
 
                 while end < haystack.len() {
-                    hash += *unsafe { haystack.get_unchecked(end) };
+                    hash.push(*unsafe { haystack.get_unchecked(end) });
                     end += 1;
 
                     let start = end - self.size();
@@ -175,7 +169,7 @@ macro_rules! avx2_searcher {
                         return true;
                     }
 
-                    hash -= *unsafe { haystack.get_unchecked(start) };
+                    hash.pop(*unsafe { haystack.get_unchecked(start) });
                 }
 
                 false
