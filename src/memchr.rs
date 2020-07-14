@@ -7,7 +7,7 @@ impl MemchrSearcher {
         Self(needle)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn inlined_search_in(&self, haystack: &[u8]) -> bool {
         if haystack.is_empty() {
             return false;
