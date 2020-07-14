@@ -161,7 +161,6 @@ macro_rules! avx2_searcher {
 
             #[inline(always)]
             fn scalar_search_in(&self, haystack: &[u8]) -> bool {
-                debug_assert!(self.size() > 0);
                 debug_assert!(haystack.len() >= self.size());
 
                 let mut end = self.size() - 1;
@@ -219,7 +218,6 @@ macro_rules! avx2_searcher {
                 hash: &VectorHash<V>,
                 next: fn(&Self, &[u8]) -> bool,
             ) -> bool {
-                debug_assert!(self.size() > 0);
                 debug_assert!(haystack.len() >= self.size());
 
                 let lanes = mem::size_of::<V>();
@@ -381,7 +379,24 @@ mod tests {
     }
 
     #[test]
+    fn search_same() {
+        assert!(search(b"foo", b"foo"));
+
+        assert!(search(
+            b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+            b"Lorem ipsum dolor sit amet, consectetur adipiscing elit"
+        ));
+
+        assert!(search(
+            b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
+            b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus"
+        ));
+    }
+
+    #[test]
     fn search_different() {
+        assert!(!search(b"bar", b"foo"));
+
         assert!(!search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"foo"
@@ -400,6 +415,8 @@ mod tests {
 
     #[test]
     fn search_prefix() {
+        assert!(search(b"foobar", b"foo"));
+
         assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"Lorem"
@@ -418,6 +435,8 @@ mod tests {
 
     #[test]
     fn search_suffix() {
+        assert!(search(b"foobar", b"bar"));
+
         assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"elit"
@@ -436,6 +455,8 @@ mod tests {
 
     #[test]
     fn search_mutiple() {
+        assert!(search(b"foobarfoo", b"foo"));
+
         assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"it"
@@ -449,6 +470,8 @@ mod tests {
 
     #[test]
     fn search_middle() {
+        assert!(search(b"foobarfoo", b"bar"));
+
         assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"consectetur"
