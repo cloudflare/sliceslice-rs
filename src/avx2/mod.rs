@@ -10,7 +10,7 @@ use std::{arch::x86_64::*, mem};
 struct ScalarHash(usize);
 
 impl From<&[u8]> for ScalarHash {
-    #[inline(always)]
+    #[inline]
     fn from(bytes: &[u8]) -> Self {
         bytes.iter().fold(Default::default(), |mut hash, &b| {
             hash.push(b);
@@ -20,12 +20,12 @@ impl From<&[u8]> for ScalarHash {
 }
 
 impl ScalarHash {
-    #[inline(always)]
+    #[inline]
     fn push(&mut self, b: u8) {
         self.0 ^= usize::from(b);
     }
 
-    #[inline(always)]
+    #[inline]
     fn pop(&mut self, b: u8) {
         self.0 ^= usize::from(b);
     }
@@ -44,54 +44,54 @@ trait Vector: Copy {
 }
 
 impl Vector for __m128i {
-    #[inline(always)]
+    #[inline]
     unsafe fn set1_epi8(a: i8) -> Self {
         _mm_set1_epi8(a)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn loadu_si(a: *const Self) -> Self {
         _mm_loadu_si128(a)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
         _mm_cmpeq_epi8(a, b)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn and_si(a: Self, b: Self) -> Self {
         _mm_and_si128(a, b)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn movemask_epi8(a: Self) -> i32 {
         _mm_movemask_epi8(a)
     }
 }
 
 impl Vector for __m256i {
-    #[inline(always)]
+    #[inline]
     unsafe fn set1_epi8(a: i8) -> Self {
         _mm256_set1_epi8(a)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn loadu_si(a: *const Self) -> Self {
         _mm256_loadu_si256(a)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
         _mm256_cmpeq_epi8(a, b)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn and_si(a: Self, b: Self) -> Self {
         _mm256_and_si256(a, b)
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn movemask_epi8(a: Self) -> i32 {
         _mm256_movemask_epi8(a)
     }
@@ -144,7 +144,7 @@ macro_rules! avx2_searcher {
                 }
             }
 
-            #[inline(always)]
+            #[inline]
             fn size(&self) -> usize {
                 if $size > 0 {
                     $size
@@ -153,7 +153,7 @@ macro_rules! avx2_searcher {
                 }
             }
 
-            #[inline(always)]
+            #[inline]
             fn scalar_search_in(&self, haystack: &[u8]) -> bool {
                 debug_assert!(haystack.len() >= self.size());
 
@@ -175,7 +175,7 @@ macro_rules! avx2_searcher {
                 false
             }
 
-            #[inline(always)]
+            #[inline]
             unsafe fn vector_search_in_chunk<V: Vector>(
                 &self,
                 haystack: &[u8],
@@ -205,7 +205,7 @@ macro_rules! avx2_searcher {
                 false
             }
 
-            #[inline(always)]
+            #[inline]
             fn vector_search_in<V: Vector>(
                 &self,
                 haystack: &[u8],
@@ -241,17 +241,17 @@ macro_rules! avx2_searcher {
                 false
             }
 
-            #[inline(always)]
+            #[inline]
             fn sse2_search_in(&self, haystack: &[u8]) -> bool {
                 self.vector_search_in(haystack, &self.sse2_hash, Self::scalar_search_in)
             }
 
-            #[inline(always)]
+            #[inline]
             fn avx2_search_in(&self, haystack: &[u8]) -> bool {
                 self.vector_search_in(haystack, &self.avx2_hash, Self::sse2_search_in)
             }
 
-            #[inline(always)]
+            #[inline]
             pub fn inlined_search_in(&self, haystack: &[u8]) -> bool {
                 if haystack.len() < self.size() {
                     return false;
@@ -328,7 +328,7 @@ impl DynamicAvx2Searcher {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn inlined_search_in(&self, haystack: &[u8]) -> bool {
         match self {
             Self::N0 => true,
