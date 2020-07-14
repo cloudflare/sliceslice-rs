@@ -183,45 +183,70 @@ macro_rules! avx2_searcher {
             }
 
             #[inline(always)]
+            unsafe fn vector_search_in_chunk<V: Vector>(
+                &self,
+                haystack: &[u8],
+                hash: &VectorHash<V>,
+                start: *const u8,
+                mask: i32,
+            ) -> bool {
+                let first = Vector::loadu_si(start.cast());
+                let last = Vector::loadu_si(start.add(self.position).cast());
+
+                let eq_first = Vector::cmpeq_epi8(hash.first, first);
+                let eq_last = Vector::cmpeq_epi8(hash.last, last);
+
+                let eq = Vector::and_si(eq_first, eq_last);
+                let mut eq = (Vector::movemask_epi8(eq) & mask) as u32;
+
+                let start = start as usize - haystack.as_ptr() as usize;
+                while eq != 0 {
+                    let chunk = &haystack[start + eq.trailing_zeros() as usize..];
+                    if $memcmp(&chunk[1..self.size()], &self.needle[1..]) {
+                        return true;
+                    }
+
+                    eq = bits::clear_leftmost_set(eq);
+                }
+
+                false
+            }
+
+            #[inline(always)]
             fn vector_search_in<V: Vector>(
                 &self,
                 haystack: &[u8],
                 hash: &VectorHash<V>,
                 next: fn(&Self, &[u8]) -> bool,
             ) -> bool {
+                debug_assert!(self.size() > 0);
+                debug_assert!(haystack.len() >= self.size());
+
                 let lanes = mem::size_of::<V>();
-                if haystack.len() < lanes {
+                let end = haystack.len() - self.size() + 1;
+
+                if end < lanes {
                     return next(self, haystack);
                 }
 
-                let mut chunks = haystack[..=haystack.len() - self.size()].chunks_exact(lanes);
+                let mut chunks = haystack[..end].chunks_exact(lanes);
                 while let Some(chunk) = chunks.next() {
-                    let start = chunk.as_ptr();
-                    let first = unsafe { Vector::loadu_si(start.cast()) };
-                    let last = unsafe { Vector::loadu_si(start.add(self.position).cast()) };
-
-                    let mask_first = unsafe { Vector::cmpeq_epi8(hash.first, first) };
-                    let mask_last = unsafe { Vector::cmpeq_epi8(hash.last, last) };
-
-                    let mask = unsafe { Vector::and_si(mask_first, mask_last) };
-                    let mut mask = unsafe { Vector::movemask_epi8(mask) } as u32;
-
-                    let start = start as usize - haystack.as_ptr() as usize;
-                    while mask != 0 {
-                        let chunk = &haystack[start + mask.trailing_zeros() as usize..];
-                        if unsafe { $memcmp(&chunk[1..self.size()], &self.needle[1..]) } {
-                            return true;
-                        }
-
-                        mask = bits::clear_leftmost_set(mask);
+                    if unsafe { self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1) } {
+                        return true;
                     }
                 }
 
-                let remainder = chunks.remainder();
-                debug_assert!(remainder.len() < lanes);
+                let remainder = chunks.remainder().len();
+                if remainder > 0 {
+                    let start = unsafe { haystack.as_ptr().add(end - lanes) };
+                    let mask = -1 << (lanes - remainder);
 
-                let chunk = &haystack[remainder.as_ptr() as usize - haystack.as_ptr() as usize..];
-                next(self, chunk)
+                    if unsafe { self.vector_search_in_chunk(haystack, hash, start, mask) } {
+                        return true;
+                    }
+                }
+
+                false
             }
 
             #[inline(always)]
@@ -405,7 +430,7 @@ mod tests {
 
         assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
-            b"liquam iaculis fringilla mi, nec aliquet purus"
+            b"Aliquam iaculis fringilla mi, nec aliquet purus"
         ));
     }
 
