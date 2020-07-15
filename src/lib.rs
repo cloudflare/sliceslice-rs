@@ -98,6 +98,11 @@ mod tests {
                     StrStrAVX2Searcher::new(word.as_bytes()).search_in(content.as_bytes()),
                     found
                 );
+                assert_eq!(
+                    DynamicAvx2Searcher::new(word.as_bytes().to_owned().into_boxed_slice())
+                        .search_in(content.as_bytes()),
+                    found
+                );
             }
         }
     }
