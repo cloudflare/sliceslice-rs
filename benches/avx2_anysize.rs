@@ -36,6 +36,11 @@ fn criterion_benchmark(c: &mut Criterion) {
         .map(|word| StrStrAVX2Searcher::new(word.as_bytes()))
         .collect();
 
+    let dynamic_avx2_searchers: Vec<DynamicAvx2Searcher> = words
+        .iter()
+        .map(|word| DynamicAvx2Searcher::new(word.clone().into_boxed_str().into()))
+        .collect();
+
     // Benchmarks against long haystacks
 
     c.bench_function("String::find with long haystack", |b| {
@@ -127,6 +132,14 @@ fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             for avx2_word in &avx2_words {
                 avx2_word.search_in(content.as_bytes());
+            }
+        })
+    });
+
+    c.bench_function("DynamicAvx2Searcher::search_in with long haystack", |b| {
+        b.iter(|| {
+            for searcher in &dynamic_avx2_searchers {
+                searcher.search_in(content.as_bytes());
             }
         })
     });
@@ -244,6 +257,16 @@ fn criterion_benchmark(c: &mut Criterion) {
             for (i, word) in avx2_words.iter().enumerate() {
                 for content in &words[(i + 1)..] {
                     word.search_in(content.as_bytes());
+                }
+            }
+        })
+    });
+
+    c.bench_function("DynamicAvx2Searcher::search_in with short haystack", |b| {
+        b.iter(|| {
+            for (i, searcher) in dynamic_avx2_searchers.iter().enumerate() {
+                for content in &words[(i + 1)..] {
+                    searcher.search_in(content.as_bytes());
                 }
             }
         })
