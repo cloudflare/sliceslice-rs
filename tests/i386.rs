@@ -37,7 +37,7 @@ fn search(haystack: &str, needle: &str) {
     let searcher = StrStrAVX2Searcher::new(needle);
     assert_eq!(searcher.search_in(haystack), result);
 
-    let searcher = DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice());
+    let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
     assert_eq!(searcher.search_in(haystack), result);
 }
 

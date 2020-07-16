@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc)]
+
 mod original;
 mod rust;
 
@@ -45,26 +47,31 @@ trait Vector: Copy {
 
 impl Vector for __m128i {
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn set1_epi8(a: i8) -> Self {
         _mm_set1_epi8(a)
     }
 
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn loadu_si(a: *const Self) -> Self {
         _mm_loadu_si128(a)
     }
 
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
         _mm_cmpeq_epi8(a, b)
     }
 
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn and_si(a: Self, b: Self) -> Self {
         _mm_and_si128(a, b)
     }
 
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn movemask_epi8(a: Self) -> i32 {
         _mm_movemask_epi8(a)
     }
@@ -72,26 +79,31 @@ impl Vector for __m128i {
 
 impl Vector for __m256i {
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn set1_epi8(a: i8) -> Self {
         _mm256_set1_epi8(a)
     }
 
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn loadu_si(a: *const Self) -> Self {
         _mm256_loadu_si256(a)
     }
 
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
         _mm256_cmpeq_epi8(a, b)
     }
 
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn and_si(a: Self, b: Self) -> Self {
         _mm256_and_si256(a, b)
     }
 
     #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn movemask_epi8(a: Self) -> i32 {
         _mm256_movemask_epi8(a)
     }
@@ -103,10 +115,11 @@ struct VectorHash<V: Vector> {
 }
 
 impl<V: Vector> VectorHash<V> {
-    fn new(first: u8, last: u8) -> Self {
+    #[target_feature(enable = "avx2")]
+    unsafe fn new(first: u8, last: u8) -> Self {
         Self {
-            first: unsafe { Vector::set1_epi8(first as i8) },
-            last: unsafe { Vector::set1_epi8(last as i8) },
+            first: Vector::set1_epi8(first as i8),
+            last: Vector::set1_epi8(last as i8),
         }
     }
 }
@@ -122,12 +135,14 @@ macro_rules! avx2_searcher {
         }
 
         impl $name {
-            pub fn new(needle: Box<[u8]>) -> Self {
+            #[target_feature(enable = "avx2")]
+            pub unsafe fn new(needle: Box<[u8]>) -> Self {
                 let position = needle.len() - 1;
                 Self::with_position(needle, position)
             }
 
-            pub fn with_position(needle: Box<[u8]>, position: usize) -> Self {
+            #[target_feature(enable = "avx2")]
+            pub unsafe fn with_position(needle: Box<[u8]>, position: usize) -> Self {
                 assert!(!needle.is_empty());
                 assert!(position < needle.len());
 
@@ -176,6 +191,7 @@ macro_rules! avx2_searcher {
             }
 
             #[inline]
+            #[target_feature(enable = "avx2")]
             unsafe fn vector_search_in_chunk<V: Vector>(
                 &self,
                 haystack: &[u8],
@@ -206,11 +222,12 @@ macro_rules! avx2_searcher {
             }
 
             #[inline]
-            fn vector_search_in<V: Vector>(
+            #[target_feature(enable = "avx2")]
+            unsafe fn vector_search_in<V: Vector>(
                 &self,
                 haystack: &[u8],
                 hash: &VectorHash<V>,
-                next: fn(&Self, &[u8]) -> bool,
+                next: unsafe fn(&Self, &[u8]) -> bool,
             ) -> bool {
                 debug_assert!(haystack.len() >= self.size());
 
@@ -223,17 +240,17 @@ macro_rules! avx2_searcher {
 
                 let mut chunks = haystack[..end].chunks_exact(lanes);
                 while let Some(chunk) = chunks.next() {
-                    if unsafe { self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1) } {
+                    if self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1) {
                         return true;
                     }
                 }
 
                 let remainder = chunks.remainder().len();
                 if remainder > 0 {
-                    let start = unsafe { haystack.as_ptr().add(end - lanes) };
+                    let start = haystack.as_ptr().add(end - lanes);
                     let mask = -1 << (lanes - remainder);
 
-                    if unsafe { self.vector_search_in_chunk(haystack, hash, start, mask) } {
+                    if self.vector_search_in_chunk(haystack, hash, start, mask) {
                         return true;
                     }
                 }
@@ -242,17 +259,20 @@ macro_rules! avx2_searcher {
             }
 
             #[inline]
-            fn sse2_search_in(&self, haystack: &[u8]) -> bool {
+            #[target_feature(enable = "avx2")]
+            unsafe fn sse2_search_in(&self, haystack: &[u8]) -> bool {
                 self.vector_search_in(haystack, &self.sse2_hash, Self::scalar_search_in)
             }
 
             #[inline]
-            fn avx2_search_in(&self, haystack: &[u8]) -> bool {
+            #[target_feature(enable = "avx2")]
+            unsafe fn avx2_search_in(&self, haystack: &[u8]) -> bool {
                 self.vector_search_in(haystack, &self.avx2_hash, Self::sse2_search_in)
             }
 
             #[inline]
-            pub fn inlined_search_in(&self, haystack: &[u8]) -> bool {
+            #[target_feature(enable = "avx2")]
+            pub unsafe fn inlined_search_in(&self, haystack: &[u8]) -> bool {
                 if haystack.len() < self.size() {
                     return false;
                 }
@@ -260,8 +280,9 @@ macro_rules! avx2_searcher {
                 self.avx2_search_in(haystack)
             }
 
+            #[inline]
             pub fn search_in(&self, haystack: &[u8]) -> bool {
-                self.inlined_search_in(haystack)
+                unsafe { self.inlined_search_in(haystack) }
             }
         }
     };
@@ -300,12 +321,14 @@ pub enum DynamicAvx2Searcher {
 }
 
 impl DynamicAvx2Searcher {
-    pub fn new(needle: Box<[u8]>) -> Self {
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn new(needle: Box<[u8]>) -> Self {
         let position = needle.len() - 1;
         Self::with_position(needle, position)
     }
 
-    pub fn with_position(needle: Box<[u8]>, position: usize) -> Self {
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn with_position(needle: Box<[u8]>, position: usize) -> Self {
         assert!(!needle.is_empty());
         assert!(position < needle.len());
 
@@ -329,7 +352,8 @@ impl DynamicAvx2Searcher {
     }
 
     #[inline]
-    pub fn inlined_search_in(&self, haystack: &[u8]) -> bool {
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn inlined_search_in(&self, haystack: &[u8]) -> bool {
         match self {
             Self::N0 => true,
             Self::N1(searcher) => searcher.inlined_search_in(haystack),
@@ -349,8 +373,9 @@ impl DynamicAvx2Searcher {
         }
     }
 
+    #[inline]
     pub fn search_in(&self, haystack: &[u8]) -> bool {
-        self.inlined_search_in(haystack)
+        unsafe { self.inlined_search_in(haystack) }
     }
 }
 
@@ -359,7 +384,7 @@ mod tests {
     use super::Avx2Searcher;
 
     fn search(haystack: &[u8], needle: &[u8]) -> bool {
-        let search = |position| {
+        let search = |position| unsafe {
             Avx2Searcher::with_position(needle.to_owned().into_boxed_slice(), position)
                 .search_in(haystack)
         };
