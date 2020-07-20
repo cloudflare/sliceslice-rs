@@ -9,6 +9,8 @@ use crate::{bits, memchr::MemchrSearcher, memcmp::memcmp};
 use std::{arch::x86_64::*, marker::PhantomData, mem};
 use typenum::{Unsigned, U10, U11, U12, U13, U2, U3, U4, U5, U6, U7, U8, U9};
 
+/// Moving hash for the simple Rabin-Karp implementation. As a hashing function, the XOR of all the
+/// bytes is computed.
 #[derive(Clone, Copy, Default, PartialEq)]
 struct ScalarHash(usize);
 
@@ -34,6 +36,8 @@ impl ScalarHash {
     }
 }
 
+/// Represents an SIMD register type that is x86-specific (but could be used more generically) in
+/// order to share functionality between SSE2, AVX2 and possibly future implementations.
 trait Vector: Copy {
     unsafe fn set1_epi8(a: i8) -> Self;
 
@@ -110,6 +114,9 @@ impl Vector for __m256i {
     }
 }
 
+/// Hash of the first and "last" bytes in the needle for use with the SIMD algorithm implemented by
+/// `Avx2Searcher::vector_search_in`. As explained, any byte can be chosen to represent the "last"
+/// byte of the hash to prevent worst-case attacks.
 struct VectorHash<V: Vector> {
     first: V,
     last: V,
@@ -189,6 +196,8 @@ impl<S: Size> Avx2Searcher<S> {
         }
     }
 
+    /// Searches for the needle within a haystack using a simple Rabin-Karp algorithm with a moving
+    /// hash.
     #[inline]
     fn scalar_search_in(&self, haystack: &[u8]) -> bool {
         debug_assert!(haystack.len() >= S::size(&self.needle));
@@ -229,6 +238,8 @@ impl<S: Size> Avx2Searcher<S> {
         let eq = Vector::and_si(eq_first, eq_last);
         let mut eq = (Vector::movemask_epi8(eq) & mask) as u32;
 
+        // With a needle length of two, there is no need to perform an equality comparison as both
+        // needle bytes have already been checked by the hashing function.
         if S::is_fixed() && S::size(&self.needle) <= 2 {
             return eq != 0;
         }
@@ -246,6 +257,27 @@ impl<S: Size> Avx2Searcher<S> {
         false
     }
 
+    /// Searches for the needle within a haystack using a variant of the "Generic SIMD" algorithm
+    /// [presented by Wojciech Muła](http://0x80.pl/articles/simd-strfind.html).
+    ///
+    /// It is similar to the Rabin-Karp algorithm, except that the hash is not moving and is
+    /// calculated for several lanes at once. It begins by picking the first byte in the needle and
+    /// checking at which positions in the haystack it occurs. Any position where it does not can be
+    /// immediately discounted as a potential match.
+    ///
+    /// We then repeat this idea with a second byte in the needle (where the haystack is suitably
+    /// offset) and take a bitwise AND to further limit the possible positions the needle can match
+    /// in. Any remaining positions are fully evaluated using an equality comparison with the
+    /// needle.
+    ///
+    /// Originally, the algorithm always used the last byte for this second byte. Whilst this is
+    /// often the most efficient option, it is vulnerable to a worst-case attack and so this
+    /// implementation instead allows any byte (including a random one) to be chosen.
+    ///
+    /// In the case where the needle is not a multiple of the number of SIMD lanes, the last chunk
+    /// is made up of a partial overlap with the penultimate chunk to avoid reading random memory,
+    /// differing from the original implementation. In this case, a mask is used to prevent
+    /// performing an equality comparison on the same position twice.
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn vector_search_in<V: Vector>(
