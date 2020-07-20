@@ -46,6 +46,11 @@ unsafe fn strstr_avx2_original_memcmp(
     None
 }
 
+#[inline]
+pub unsafe fn memcmp(left: &[u8], right: &[u8]) -> bool {
+    left == right
+}
+
 /// Version copied from https://github.com/WojciechMula/sse4-strstr/blob/master/avx2-strstr-v2.cpp
 /// This version is somewhat not safe because it can read past the end of the haystack slice.
 #[cfg(target_arch = "x86_64")]

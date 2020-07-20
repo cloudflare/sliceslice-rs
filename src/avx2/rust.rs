@@ -81,6 +81,11 @@ fn strstr_rabin_karp(haystack: &[u8], needle: &[u8]) -> bool {
     false
 }
 
+#[inline]
+pub unsafe fn memcmp(left: &[u8], right: &[u8]) -> bool {
+    left == right
+}
+
 #[cfg(target_feature = "avx2")]
 pub fn strstr_avx2_rust(haystack: &[u8], needle: &[u8]) -> bool {
     match needle.len() {

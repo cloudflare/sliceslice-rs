@@ -9,6 +9,7 @@ bench = false
 
 [dependencies]
 memchr = "2.3"
+typenum = "1.12"
 
 [dev-dependencies]
 criterion = "0.3"

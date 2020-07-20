@@ -95,6 +95,21 @@ pub unsafe fn memcmp12(left: &[u8], right: &[u8]) -> bool {
 }
 
 #[inline]
-pub unsafe fn memcmp(left: &[u8], right: &[u8]) -> bool {
-    left == right
+pub unsafe fn memcmp(left: &[u8], right: &[u8], n: usize) -> bool {
+    match n {
+        0 => memcmp0(left, right),
+        1 => memcmp1(left, right),
+        2 => memcmp2(left, right),
+        3 => memcmp3(left, right),
+        4 => memcmp4(left, right),
+        5 => memcmp5(left, right),
+        6 => memcmp6(left, right),
+        7 => memcmp7(left, right),
+        8 => memcmp8(left, right),
+        9 => memcmp9(left, right),
+        10 => memcmp10(left, right),
+        11 => memcmp11(left, right),
+        12 => memcmp12(left, right),
+        _ => left == right,
+    }
 }
