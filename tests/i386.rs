@@ -18,21 +18,7 @@ fn search(haystack: &str, needle: &str) {
 
     assert_eq!(unsafe { strstr_avx2_original(haystack, needle) }, result);
 
-    assert_eq!(unsafe { strstr_avx2_rust_simple(haystack, needle) }, result);
-
-    assert_eq!(
-        unsafe { strstr_avx2_rust_simple_2(haystack, needle) },
-        result
-    );
-
-    assert_eq!(unsafe { strstr_avx2_rust_fast(haystack, needle) }, result);
-
-    assert_eq!(strstr_avx2_rust_fast_2(haystack, needle), result);
-
-    assert_eq!(
-        unsafe { strstr_avx2_rust_aligned(haystack, needle) },
-        result
-    );
+    assert_eq!(strstr_avx2_rust(haystack, needle), result);
 
     let searcher = StrStrAVX2Searcher::new(needle);
     assert_eq!(searcher.search_in(haystack), result);
@@ -46,7 +32,6 @@ fn search_short_haystack() {
     let mut needles = BufReader::new(File::open("data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
-        .filter(|needle| needle.len() > 1)
         .collect::<Vec<_>>();
     needles.sort_unstable_by_key(|needle| needle.len());
 
@@ -64,8 +49,7 @@ fn search_long_haystack() {
 
     let needles = BufReader::new(File::open("data/words.txt").unwrap())
         .lines()
-        .map(Result::unwrap)
-        .filter(|needle| needle.len() > 1);
+        .map(Result::unwrap);
 
     for needle in needles {
         search(&haystack, &needle);

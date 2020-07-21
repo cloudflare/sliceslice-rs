@@ -10,7 +10,6 @@ fn search_short_haystack(c: &mut Criterion) {
     let mut needles = BufReader::new(File::open("data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
-        .filter(|needle| needle.len() > 1)
         .collect::<Vec<_>>();
     needles.sort_unstable_by_key(|needle| needle.len());
     let needles = needles.iter().map(String::as_str).collect::<Vec<_>>();
@@ -64,62 +63,11 @@ fn search_short_haystack(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("strstr_avx2_rust_simple", |b| {
+    group.bench_function("strstr_avx2_rust", |b| {
         b.iter(|| {
             for (i, needle) in needles.iter().enumerate() {
                 for haystack in &needles[i..] {
-                    black_box(unsafe {
-                        strstr_avx2_rust_simple(haystack.as_bytes(), needle.as_bytes())
-                    });
-                }
-            }
-        });
-    });
-
-    group.bench_function("strstr_avx2_rust_simple_2", |b| {
-        b.iter(|| {
-            for (i, needle) in needles.iter().enumerate() {
-                for haystack in &needles[i..] {
-                    black_box(unsafe {
-                        strstr_avx2_rust_simple_2(haystack.as_bytes(), needle.as_bytes())
-                    });
-                }
-            }
-        });
-    });
-
-    group.bench_function("strstr_avx2_rust_fast", |b| {
-        b.iter(|| {
-            for (i, needle) in needles.iter().enumerate() {
-                for haystack in &needles[i..] {
-                    black_box(unsafe {
-                        strstr_avx2_rust_fast(haystack.as_bytes(), needle.as_bytes())
-                    });
-                }
-            }
-        });
-    });
-
-    group.bench_function("strstr_avx2_rust_fast_2", |b| {
-        b.iter(|| {
-            for (i, needle) in needles.iter().enumerate() {
-                for haystack in &needles[i..] {
-                    black_box(strstr_avx2_rust_fast_2(
-                        haystack.as_bytes(),
-                        needle.as_bytes(),
-                    ));
-                }
-            }
-        });
-    });
-
-    group.bench_function("strstr_avx2_rust_aligned", |b| {
-        b.iter(|| {
-            for (i, needle) in needles.iter().enumerate() {
-                for haystack in &needles[i..] {
-                    black_box(unsafe {
-                        strstr_avx2_rust_aligned(haystack.as_bytes(), needle.as_bytes())
-                    });
+                    black_box(strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes()));
                 }
             }
         });
@@ -167,7 +115,6 @@ fn search_long_haystack(c: &mut Criterion) {
     let needles = BufReader::new(File::open("data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
-        .filter(|needle| needle.len() > 1)
         .collect::<Vec<_>>();
 
     let mut group = c.benchmark_group("long_haystack");
@@ -209,51 +156,10 @@ fn search_long_haystack(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("strstr_avx2_rust_simple", |b| {
+    group.bench_function("strstr_avx2_rust", |b| {
         b.iter(|| {
             for needle in &needles {
-                black_box(unsafe {
-                    strstr_avx2_rust_simple(haystack.as_bytes(), needle.as_bytes())
-                });
-            }
-        });
-    });
-
-    group.bench_function("strstr_avx2_rust_simple_2", |b| {
-        b.iter(|| {
-            for needle in &needles {
-                black_box(unsafe {
-                    strstr_avx2_rust_simple_2(haystack.as_bytes(), needle.as_bytes())
-                });
-            }
-        });
-    });
-
-    group.bench_function("strstr_avx2_rust_fast", |b| {
-        b.iter(|| {
-            for needle in &needles {
-                black_box(unsafe { strstr_avx2_rust_fast(haystack.as_bytes(), needle.as_bytes()) });
-            }
-        });
-    });
-
-    group.bench_function("strstr_avx2_rust_fast_2", |b| {
-        b.iter(|| {
-            for needle in &needles {
-                black_box(strstr_avx2_rust_fast_2(
-                    haystack.as_bytes(),
-                    needle.as_bytes(),
-                ));
-            }
-        });
-    });
-
-    group.bench_function("strstr_avx2_rust_aligned", |b| {
-        b.iter(|| {
-            for needle in &needles {
-                black_box(unsafe {
-                    strstr_avx2_rust_aligned(haystack.as_bytes(), needle.as_bytes())
-                });
+                black_box(strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes()));
             }
         });
     });
