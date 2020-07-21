@@ -1,12 +1,15 @@
 use memchr::memchr;
 
+/// Single-byte searcher using `memchr` for faster matching.
 pub struct MemchrSearcher(u8);
 
 impl MemchrSearcher {
+    /// Creates a new searcher for `needle`.
     pub fn new(needle: u8) -> Self {
         Self(needle)
     }
 
+    /// Inlined version of `search_in` for hot call sites.
     #[inline]
     pub fn inlined_search_in(&self, haystack: &[u8]) -> bool {
         if haystack.is_empty() {
@@ -16,6 +19,7 @@ impl MemchrSearcher {
         memchr(self.0, haystack).is_some()
     }
 
+    /// Performs a substring search for the `needle` within `haystack`.
     pub fn search_in(&self, haystack: &[u8]) -> bool {
         self.inlined_search_in(haystack)
     }
