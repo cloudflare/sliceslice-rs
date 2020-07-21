@@ -73,8 +73,7 @@ fn search(c: &mut Criterion) {
                 BenchmarkId::new("DynamicAvx2Searcher::search_in", parameter),
                 &size,
                 |b, _| {
-                    let searcher =
-                        unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
+                    let searcher = unsafe { DynamicAvx2Searcher::new(needle) };
                     b.iter(|| black_box(searcher.search_in(haystack)));
                 },
             );

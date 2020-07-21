@@ -125,9 +125,9 @@ impl<V: Vector> VectorHash<V> {
 }
 
 macro_rules! avx2_searcher {
-    ($name:ident, $size:literal, $memcmp:path) => {
+    ($name:ident, $needle:ty, $memcmp:path) => {
         pub struct $name {
-            needle: Box<[u8]>,
+            needle: $needle,
             position: usize,
             scalar_hash: ScalarHash,
             sse2_hash: VectorHash<__m128i>,
@@ -136,13 +136,13 @@ macro_rules! avx2_searcher {
 
         impl $name {
             #[target_feature(enable = "avx2")]
-            pub unsafe fn new(needle: Box<[u8]>) -> Self {
+            pub unsafe fn new(needle: $needle) -> Self {
                 let position = needle.len() - 1;
                 Self::with_position(needle, position)
             }
 
             #[target_feature(enable = "avx2")]
-            pub unsafe fn with_position(needle: Box<[u8]>, position: usize) -> Self {
+            pub unsafe fn with_position(needle: $needle, position: usize) -> Self {
                 assert!(!needle.is_empty());
                 assert!(position < needle.len());
 
@@ -160,27 +160,18 @@ macro_rules! avx2_searcher {
             }
 
             #[inline]
-            fn size(&self) -> usize {
-                if $size > 0 {
-                    $size
-                } else {
-                    self.needle.len()
-                }
-            }
-
-            #[inline]
             fn scalar_search_in(&self, haystack: &[u8]) -> bool {
-                debug_assert!(haystack.len() >= self.size());
+                debug_assert!(haystack.len() >= self.needle.len());
 
-                let mut end = self.size() - 1;
+                let mut end = self.needle.len() - 1;
                 let mut hash = ScalarHash::from(&haystack[..end]);
 
                 while end < haystack.len() {
                     hash.push(*unsafe { haystack.get_unchecked(end) });
                     end += 1;
 
-                    let start = end - self.size();
-                    if hash == self.scalar_hash && haystack[start..end] == *self.needle {
+                    let start = end - self.needle.len();
+                    if hash == self.scalar_hash && &haystack[start..end] == &self.needle[..] {
                         return true;
                     }
 
@@ -211,7 +202,7 @@ macro_rules! avx2_searcher {
                 let start = start as usize - haystack.as_ptr() as usize;
                 while eq != 0 {
                     let chunk = &haystack[start + eq.trailing_zeros() as usize..];
-                    if $memcmp(&chunk[1..self.size()], &self.needle[1..]) {
+                    if $memcmp(&chunk[1..self.needle.len()], &self.needle[1..]) {
                         return true;
                     }
 
@@ -229,10 +220,10 @@ macro_rules! avx2_searcher {
                 hash: &VectorHash<V>,
                 next: unsafe fn(&Self, &[u8]) -> bool,
             ) -> bool {
-                debug_assert!(haystack.len() >= self.size());
+                debug_assert!(haystack.len() >= self.needle.len());
 
                 let lanes = mem::size_of::<V>();
-                let end = haystack.len() - self.size() + 1;
+                let end = haystack.len() - self.needle.len() + 1;
 
                 if end < lanes {
                     return next(self, haystack);
@@ -273,7 +264,7 @@ macro_rules! avx2_searcher {
             #[inline]
             #[target_feature(enable = "avx2")]
             pub unsafe fn inlined_search_in(&self, haystack: &[u8]) -> bool {
-                if haystack.len() < self.size() {
+                if haystack.len() < self.needle.len() {
                     return false;
                 }
 
@@ -288,19 +279,19 @@ macro_rules! avx2_searcher {
     };
 }
 
-avx2_searcher!(Avx2Searcher, 0, memcmp::memcmp);
-avx2_searcher!(Avx2Searcher2, 2, memcmp::memcmp1);
-avx2_searcher!(Avx2Searcher3, 3, memcmp::memcmp2);
-avx2_searcher!(Avx2Searcher4, 4, memcmp::memcmp3);
-avx2_searcher!(Avx2Searcher5, 5, memcmp::memcmp4);
-avx2_searcher!(Avx2Searcher6, 6, memcmp::memcmp5);
-avx2_searcher!(Avx2Searcher7, 7, memcmp::memcmp6);
-avx2_searcher!(Avx2Searcher8, 8, memcmp::memcmp7);
-avx2_searcher!(Avx2Searcher9, 9, memcmp::memcmp8);
-avx2_searcher!(Avx2Searcher10, 10, memcmp::memcmp9);
-avx2_searcher!(Avx2Searcher11, 11, memcmp::memcmp10);
-avx2_searcher!(Avx2Searcher12, 12, memcmp::memcmp11);
-avx2_searcher!(Avx2Searcher13, 13, memcmp::memcmp12);
+avx2_searcher!(Avx2Searcher, Box<[u8]>, memcmp::memcmp);
+avx2_searcher!(Avx2Searcher2, [u8; 2], memcmp::memcmp1);
+avx2_searcher!(Avx2Searcher3, [u8; 3], memcmp::memcmp2);
+avx2_searcher!(Avx2Searcher4, [u8; 4], memcmp::memcmp3);
+avx2_searcher!(Avx2Searcher5, [u8; 5], memcmp::memcmp4);
+avx2_searcher!(Avx2Searcher6, [u8; 6], memcmp::memcmp5);
+avx2_searcher!(Avx2Searcher7, [u8; 7], memcmp::memcmp6);
+avx2_searcher!(Avx2Searcher8, [u8; 8], memcmp::memcmp7);
+avx2_searcher!(Avx2Searcher9, [u8; 9], memcmp::memcmp8);
+avx2_searcher!(Avx2Searcher10, [u8; 10], memcmp::memcmp9);
+avx2_searcher!(Avx2Searcher11, [u8; 11], memcmp::memcmp10);
+avx2_searcher!(Avx2Searcher12, [u8; 12], memcmp::memcmp11);
+avx2_searcher!(Avx2Searcher13, [u8; 13], memcmp::memcmp12);
 
 pub enum DynamicAvx2Searcher {
     N0,
@@ -320,34 +311,36 @@ pub enum DynamicAvx2Searcher {
     N(Avx2Searcher),
 }
 
+use std::convert::TryInto;
+
 impl DynamicAvx2Searcher {
     #[target_feature(enable = "avx2")]
-    pub unsafe fn new(needle: Box<[u8]>) -> Self {
+    pub unsafe fn new(needle: &[u8]) -> Self {
         let position = needle.len() - 1;
         Self::with_position(needle, position)
     }
 
     #[target_feature(enable = "avx2")]
-    pub unsafe fn with_position(needle: Box<[u8]>, position: usize) -> Self {
+    pub unsafe fn with_position(needle: &[u8], position: usize) -> Self {
         assert!(!needle.is_empty());
         assert!(position < needle.len());
 
         match needle.len() {
             0 => Self::N0,
             1 => Self::N1(MemchrSearcher::new(needle[0])),
-            2 => Self::N2(Avx2Searcher2::new(needle)),
-            3 => Self::N3(Avx2Searcher3::new(needle)),
-            4 => Self::N4(Avx2Searcher4::new(needle)),
-            5 => Self::N5(Avx2Searcher5::new(needle)),
-            6 => Self::N6(Avx2Searcher6::new(needle)),
-            7 => Self::N7(Avx2Searcher7::new(needle)),
-            8 => Self::N8(Avx2Searcher8::new(needle)),
-            9 => Self::N9(Avx2Searcher9::new(needle)),
-            10 => Self::N10(Avx2Searcher10::new(needle)),
-            11 => Self::N11(Avx2Searcher11::new(needle)),
-            12 => Self::N12(Avx2Searcher12::new(needle)),
-            13 => Self::N13(Avx2Searcher13::new(needle)),
-            _ => Self::N(Avx2Searcher::new(needle)),
+            2 => Self::N2(Avx2Searcher2::new(needle.try_into().unwrap())),
+            3 => Self::N3(Avx2Searcher3::new(needle.try_into().unwrap())),
+            4 => Self::N4(Avx2Searcher4::new(needle.try_into().unwrap())),
+            5 => Self::N5(Avx2Searcher5::new(needle.try_into().unwrap())),
+            6 => Self::N6(Avx2Searcher6::new(needle.try_into().unwrap())),
+            7 => Self::N7(Avx2Searcher7::new(needle.try_into().unwrap())),
+            8 => Self::N8(Avx2Searcher8::new(needle.try_into().unwrap())),
+            9 => Self::N9(Avx2Searcher9::new(needle.try_into().unwrap())),
+            10 => Self::N10(Avx2Searcher10::new(needle.try_into().unwrap())),
+            11 => Self::N11(Avx2Searcher11::new(needle.try_into().unwrap())),
+            12 => Self::N12(Avx2Searcher12::new(needle.try_into().unwrap())),
+            13 => Self::N13(Avx2Searcher13::new(needle.try_into().unwrap())),
+            _ => Self::N(Avx2Searcher::new(needle.to_vec().into_boxed_slice())),
         }
     }
 
