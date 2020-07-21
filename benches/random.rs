@@ -53,42 +53,10 @@ fn search(c: &mut Criterion) {
             );
 
             group.bench_with_input(
-                BenchmarkId::new("strstr_avx2_rust_simple", parameter),
+                BenchmarkId::new("strstr_avx2_rust", parameter),
                 &size,
                 |b, _| {
-                    b.iter(|| black_box(unsafe { strstr_avx2_rust_simple(haystack, needle) }));
-                },
-            );
-
-            group.bench_with_input(
-                BenchmarkId::new("strstr_avx2_rust_simple_2", parameter),
-                &size,
-                |b, _| {
-                    b.iter(|| black_box(unsafe { strstr_avx2_rust_simple_2(haystack, needle) }));
-                },
-            );
-
-            group.bench_with_input(
-                BenchmarkId::new("strstr_avx2_rust_fast", parameter),
-                &size,
-                |b, _| {
-                    b.iter(|| black_box(unsafe { strstr_avx2_rust_fast(haystack, needle) }));
-                },
-            );
-
-            group.bench_with_input(
-                BenchmarkId::new("strstr_avx2_rust_fast_2", parameter),
-                &size,
-                |b, _| {
-                    b.iter(|| black_box(strstr_avx2_rust_fast_2(haystack, needle)));
-                },
-            );
-
-            group.bench_with_input(
-                BenchmarkId::new("strstr_avx2_rust_aligned", parameter),
-                &size,
-                |b, _| {
-                    b.iter(|| black_box(unsafe { strstr_avx2_rust_aligned(haystack, needle) }));
+                    b.iter(|| black_box(strstr_avx2_rust(haystack, needle)));
                 },
             );
 
