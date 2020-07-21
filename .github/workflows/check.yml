@@ -1,0 +1,16 @@
+name: Check
+on: push
+jobs:
+  cargo:
+    name: Cargo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          components: clippy, rustfmt
+          default: true
+      - run: cargo fmt -- --check
+      - run: cargo build --all-targets --all-features
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --all-features
