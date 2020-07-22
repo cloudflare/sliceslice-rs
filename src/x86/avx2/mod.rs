@@ -11,7 +11,7 @@ use std::arch::x86::*;
 use std::arch::x86_64::*;
 use std::mem;
 
-/// Rolling hash for the simple Rabin-Karp implementation. As a hashing function, the XOR of all the
+/// Rolling hash for the simple Rabin-Karp implementation. As a hashing function, the sum of all the
 /// bytes is computed.
 #[derive(Clone, Copy, Default, PartialEq)]
 struct ScalarHash(usize);
@@ -29,12 +29,12 @@ impl From<&[u8]> for ScalarHash {
 impl ScalarHash {
     #[inline]
     fn push(&mut self, b: u8) {
-        self.0 ^= usize::from(b);
+        self.0 = self.0.wrapping_add(b.into());
     }
 
     #[inline]
     fn pop(&mut self, b: u8) {
-        self.0 ^= usize::from(b);
+        self.0 = self.0.wrapping_sub(b.into());
     }
 }
 
