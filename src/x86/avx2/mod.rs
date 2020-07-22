@@ -1,12 +1,15 @@
 #![allow(clippy::missing_safety_doc)]
 
-mod original;
-mod rust;
-
-pub use self::{original::*, rust::*};
+/// Substring search implementations that are deprecated.
+#[deprecated = "Please use DynamicAvx2Searcher implementation instead"]
+pub mod deprecated;
 
 use crate::{bits, memchr::MemchrSearcher, memcmp};
-use std::{arch::x86_64::*, mem};
+#[cfg(target_arch = "x86")]
+use std::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+use std::mem;
 
 /// Rolling hash for the simple Rabin-Karp implementation. As a hashing function, the XOR of all the
 /// bytes is computed.
@@ -316,9 +319,9 @@ macro_rules! avx2_searcher {
             }
 
             /// Performs a substring search for the `needle` within `haystack`.
-            #[inline]
-            pub fn search_in(&self, haystack: &[u8]) -> bool {
-                unsafe { self.inlined_search_in(haystack) }
+            #[target_feature(enable = "avx2")]
+            pub unsafe fn search_in(&self, haystack: &[u8]) -> bool {
+                self.inlined_search_in(haystack)
             }
         }
     };
@@ -345,20 +348,35 @@ avx2_searcher!(Avx2Searcher13, 13, memcmp::memcmp12);
 /// specialized versions of `Avx2Searcher`, finally falling back to the generic version of
 /// `Avx2Searcher` for longer needles.
 pub enum DynamicAvx2Searcher {
+    /// Specialization for needles with length 0.
     N0,
+    /// Specialization for needles with length 1.
     N1(MemchrSearcher),
+    /// Specialization for needles with length 2.
     N2(Avx2Searcher2),
+    /// Specialization for needles with length 3.
     N3(Avx2Searcher3),
+    /// Specialization for needles with length 4.
     N4(Avx2Searcher4),
+    /// Specialization for needles with length 5.
     N5(Avx2Searcher5),
+    /// Specialization for needles with length 6.
     N6(Avx2Searcher6),
+    /// Specialization for needles with length 7.
     N7(Avx2Searcher7),
+    /// Specialization for needles with length 8.
     N8(Avx2Searcher8),
+    /// Specialization for needles with length 9.
     N9(Avx2Searcher9),
+    /// Specialization for needles with length 10.
     N10(Avx2Searcher10),
+    /// Specialization for needles with length 11.
     N11(Avx2Searcher11),
+    /// Specialization for needles with length 12.
     N12(Avx2Searcher12),
+    /// Specialization for needles with length 13.
     N13(Avx2Searcher13),
+    /// Fallback implementation for needles of any size.
     N(Avx2Searcher),
 }
 
@@ -420,9 +438,9 @@ impl DynamicAvx2Searcher {
     }
 
     /// Performs a substring search for the `needle` within `haystack`.
-    #[inline]
-    pub fn search_in(&self, haystack: &[u8]) -> bool {
-        unsafe { self.inlined_search_in(haystack) }
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn search_in(&self, haystack: &[u8]) -> bool {
+        self.inlined_search_in(haystack)
     }
 }
 

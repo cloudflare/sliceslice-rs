@@ -1,14 +1,13 @@
 #![allow(clippy::cast_ptr_alignment)]
-#![allow(clippy::missing_safety_doc)]
 
-use crate::bits::*;
-use crate::memcmp::*;
-
+use crate::{bits::clear_leftmost_set, memcmp::*};
+#[cfg(target_arch = "x86")]
+use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
-#[cfg(target_feature = "avx2")]
-#[inline(always)]
+#[inline]
+#[target_feature(enable = "avx2")]
 unsafe fn strstr_avx2_rust_memcmp(
     haystack: &[u8],
     needle: &[u8],
@@ -56,7 +55,7 @@ unsafe fn strstr_avx2_rust_memcmp(
     }
 }
 
-#[inline(always)]
+#[inline]
 fn strstr_rabin_karp(haystack: &[u8], needle: &[u8]) -> bool {
     let mut needle_sum = 0_usize;
     for &c in needle {
@@ -81,29 +80,31 @@ fn strstr_rabin_karp(haystack: &[u8], needle: &[u8]) -> bool {
     false
 }
 
-#[cfg(target_feature = "avx2")]
-pub fn strstr_avx2_rust(haystack: &[u8], needle: &[u8]) -> bool {
+/// Similar to `strstr_avx2_original` implementation, but adapted for safety to prevent reading past
+/// the end of the haystack.
+#[target_feature(enable = "avx2")]
+pub unsafe fn strstr_avx2_rust(haystack: &[u8], needle: &[u8]) -> bool {
     match needle.len() {
         0 => true,
         1 => memchr::memchr(needle[0], haystack).is_some(),
-        2 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp0) },
-        3 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp1) },
-        4 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp2) },
-        5 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp4) },
-        6 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp4) },
-        7 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp5) },
-        8 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp6) },
-        9 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp8) },
-        10 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp8) },
-        11 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp9) },
-        12 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp10) },
-        13 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp11) },
-        14 => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp12) },
-        _ => unsafe { strstr_avx2_rust_memcmp(haystack, needle, memcmp) },
+        2 => strstr_avx2_rust_memcmp(haystack, needle, memcmp0),
+        3 => strstr_avx2_rust_memcmp(haystack, needle, memcmp1),
+        4 => strstr_avx2_rust_memcmp(haystack, needle, memcmp2),
+        5 => strstr_avx2_rust_memcmp(haystack, needle, memcmp4),
+        6 => strstr_avx2_rust_memcmp(haystack, needle, memcmp4),
+        7 => strstr_avx2_rust_memcmp(haystack, needle, memcmp5),
+        8 => strstr_avx2_rust_memcmp(haystack, needle, memcmp6),
+        9 => strstr_avx2_rust_memcmp(haystack, needle, memcmp8),
+        10 => strstr_avx2_rust_memcmp(haystack, needle, memcmp8),
+        11 => strstr_avx2_rust_memcmp(haystack, needle, memcmp9),
+        12 => strstr_avx2_rust_memcmp(haystack, needle, memcmp10),
+        13 => strstr_avx2_rust_memcmp(haystack, needle, memcmp11),
+        14 => strstr_avx2_rust_memcmp(haystack, needle, memcmp12),
+        _ => strstr_avx2_rust_memcmp(haystack, needle, memcmp),
     }
 }
 
-#[cfg(target_feature = "avx2")]
+/// Similar to `strstr_avx2_rust` implementation, but adapted into a struct.
 pub struct StrStrAVX2Searcher {
     needle: Box<[u8]>,
     position: usize,
@@ -114,13 +115,17 @@ pub struct StrStrAVX2Searcher {
     needle_sum: usize,
 }
 
-#[cfg(target_feature = "avx2")]
 impl StrStrAVX2Searcher {
-    pub fn new(needle: &[u8]) -> Self {
+    /// Creates a new searcher for `needle`. By default, `position` is set to the last character in
+    /// the needle.
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn new(needle: &[u8]) -> Self {
         Self::with_position(needle, needle.len() - 1)
     }
 
-    pub fn with_position(needle: &[u8], position: usize) -> Self {
+    /// Same as `new` but allows additionally specifying the `position` to use.
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn with_position(needle: &[u8], position: usize) -> Self {
         let mut needle_sum = 0_usize;
         for &c in needle {
             needle_sum += c as usize;
@@ -128,38 +133,41 @@ impl StrStrAVX2Searcher {
         StrStrAVX2Searcher {
             needle: needle.to_vec().into_boxed_slice(),
             position,
-            sse_first: unsafe { _mm_set1_epi8(needle[0] as i8) },
-            sse_last: unsafe { _mm_set1_epi8(needle[position] as i8) },
-            avx2_first: unsafe { _mm256_set1_epi8(needle[0] as i8) },
-            avx2_last: unsafe { _mm256_set1_epi8(needle[position] as i8) },
+            sse_first: _mm_set1_epi8(needle[0] as i8),
+            sse_last: _mm_set1_epi8(needle[position] as i8),
+            avx2_first: _mm256_set1_epi8(needle[0] as i8),
+            avx2_last: _mm256_set1_epi8(needle[position] as i8),
             needle_sum,
         }
     }
 
-    pub fn search_in(&self, haystack: &[u8]) -> bool {
+    /// Performs a substring search for the `needle` within `haystack`.
+    #[target_feature(enable = "avx2")]
+    pub unsafe fn search_in(&self, haystack: &[u8]) -> bool {
         if haystack.len() < self.needle.len() {
             return false;
         }
         match self.needle.len() {
             0 => true,
             1 => memchr::memchr(self.needle[0], haystack).is_some(),
-            2 => unsafe { self.avx2_memcmp(haystack, memcmp1) },
-            3 => unsafe { self.avx2_memcmp(haystack, memcmp2) },
-            4 => unsafe { self.avx2_memcmp(haystack, memcmp3) },
-            5 => unsafe { self.avx2_memcmp(haystack, memcmp4) },
-            6 => unsafe { self.avx2_memcmp(haystack, memcmp5) },
-            7 => unsafe { self.avx2_memcmp(haystack, memcmp6) },
-            8 => unsafe { self.avx2_memcmp(haystack, memcmp7) },
-            9 => unsafe { self.avx2_memcmp(haystack, memcmp8) },
-            10 => unsafe { self.avx2_memcmp(haystack, memcmp9) },
-            11 => unsafe { self.avx2_memcmp(haystack, memcmp10) },
-            12 => unsafe { self.avx2_memcmp(haystack, memcmp11) },
-            13 => unsafe { self.avx2_memcmp(haystack, memcmp12) },
-            _ => unsafe { self.avx2_memcmp(haystack, memcmp) },
+            2 => self.avx2_memcmp(haystack, memcmp1),
+            3 => self.avx2_memcmp(haystack, memcmp2),
+            4 => self.avx2_memcmp(haystack, memcmp3),
+            5 => self.avx2_memcmp(haystack, memcmp4),
+            6 => self.avx2_memcmp(haystack, memcmp5),
+            7 => self.avx2_memcmp(haystack, memcmp6),
+            8 => self.avx2_memcmp(haystack, memcmp7),
+            9 => self.avx2_memcmp(haystack, memcmp8),
+            10 => self.avx2_memcmp(haystack, memcmp9),
+            11 => self.avx2_memcmp(haystack, memcmp10),
+            12 => self.avx2_memcmp(haystack, memcmp11),
+            13 => self.avx2_memcmp(haystack, memcmp12),
+            _ => self.avx2_memcmp(haystack, memcmp),
         }
     }
 
-    #[inline(always)]
+    #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn sse_memcmp(&self, haystack: &[u8], memcmp: unsafe fn(&[u8], &[u8]) -> bool) -> bool {
         if haystack.len() < 16 {
             return self.rabin_karp(haystack);
@@ -199,7 +207,8 @@ impl StrStrAVX2Searcher {
         }
     }
 
-    #[inline(always)]
+    #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn avx2_memcmp(&self, haystack: &[u8], memcmp: unsafe fn(&[u8], &[u8]) -> bool) -> bool {
         if haystack.len() < 32 {
             return self.sse_memcmp(haystack, memcmp);
@@ -242,7 +251,7 @@ impl StrStrAVX2Searcher {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     unsafe fn rabin_karp(&self, haystack: &[u8]) -> bool {
         let mut haystack_sum = 0_usize;
         for &c in &haystack[..self.needle.len() - 1] {
@@ -267,17 +276,17 @@ impl StrStrAVX2Searcher {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn test_needle_length_3() {
-        use super::strstr_avx2_rust;
+    use super::strstr_avx2_rust;
 
+    #[test]
+    fn needle_length_3() {
         let mut input = [0; 32];
 
         for i in 0..=(input.len() - 3) {
             input = [b'A'; 32];
             input[i..(i + 3)].copy_from_slice(&[b'B'; 3]);
             assert_eq!(
-                strstr_avx2_rust(&input[..], b"BBB"),
+                unsafe { strstr_avx2_rust(&input[..], b"BBB") },
                 true,
                 "{:?} should contain {:?}",
                 &input[..],
@@ -291,7 +300,7 @@ mod tests {
             input = [b'A'; 63];
             input[i..(i + 3)].copy_from_slice(&[b'B'; 3]);
             assert_eq!(
-                strstr_avx2_rust(&input[..], b"BBB"),
+                unsafe { strstr_avx2_rust(&input[..], b"BBB") },
                 true,
                 "{:?} should contain {:?}",
                 &input[..],
