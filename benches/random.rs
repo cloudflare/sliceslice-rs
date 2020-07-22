@@ -1,6 +1,8 @@
+#![allow(deprecated)]
+
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use memmem::{Searcher, TwoWaySearcher};
-use strstr::avx2::*;
+use sliceslice::x86::avx2::{deprecated::*, *};
 
 fn search(c: &mut Criterion) {
     let haystack = include_str!("../data/haystack");
@@ -44,40 +46,44 @@ fn search(c: &mut Criterion) {
                 },
             );
 
-            group.bench_with_input(
-                BenchmarkId::new("strstr_avx2_original", parameter),
-                &size,
-                |b, _| {
-                    b.iter(|| black_box(unsafe { strstr_avx2_original(haystack, needle) }));
-                },
-            );
+            #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+            {
+                group.bench_with_input(
+                    BenchmarkId::new("strstr_avx2_original", parameter),
+                    &size,
+                    |b, _| {
+                        b.iter(|| black_box(unsafe { strstr_avx2_original(haystack, needle) }));
+                    },
+                );
 
-            group.bench_with_input(
-                BenchmarkId::new("strstr_avx2_rust", parameter),
-                &size,
-                |b, _| {
-                    b.iter(|| black_box(strstr_avx2_rust(haystack, needle)));
-                },
-            );
+                group.bench_with_input(
+                    BenchmarkId::new("strstr_avx2_rust", parameter),
+                    &size,
+                    |b, _| {
+                        b.iter(|| black_box(unsafe { strstr_avx2_rust(haystack, needle) }));
+                    },
+                );
 
-            group.bench_with_input(
-                BenchmarkId::new("StrStrAVX2Searcher::search_in", parameter),
-                &size,
-                |b, _| {
-                    let searcher = StrStrAVX2Searcher::new(needle);
-                    b.iter(|| black_box(searcher.search_in(haystack)));
-                },
-            );
+                group.bench_with_input(
+                    BenchmarkId::new("StrStrAVX2Searcher::search_in", parameter),
+                    &size,
+                    |b, _| {
+                        let searcher = unsafe { StrStrAVX2Searcher::new(needle) };
+                        b.iter(|| black_box(unsafe { searcher.search_in(haystack) }));
+                    },
+                );
 
-            group.bench_with_input(
-                BenchmarkId::new("DynamicAvx2Searcher::search_in", parameter),
-                &size,
-                |b, _| {
-                    let searcher =
-                        unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
-                    b.iter(|| black_box(searcher.search_in(haystack)));
-                },
-            );
+                group.bench_with_input(
+                    BenchmarkId::new("DynamicAvx2Searcher::search_in", parameter),
+                    &size,
+                    |b, _| {
+                        let searcher = unsafe {
+                            DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice())
+                        };
+                        b.iter(|| black_box(unsafe { searcher.search_in(haystack) }));
+                    },
+                );
+            }
         }
 
         group.finish();

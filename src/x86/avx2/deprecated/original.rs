@@ -1,12 +1,12 @@
-use crate::bits::clear_leftmost_set;
-
-use crate::memcmp::*;
+use crate::{bits::clear_leftmost_set, memcmp::*};
+#[cfg(target_arch = "x86")]
+use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 use std::slice::from_raw_parts;
 
-#[cfg(target_arch = "x86_64")]
-#[inline(always)]
+#[inline]
+#[target_feature(enable = "avx2")]
 unsafe fn strstr_avx2_original_memcmp(
     haystack: *const u8,
     n: usize,
@@ -46,10 +46,10 @@ unsafe fn strstr_avx2_original_memcmp(
     None
 }
 
-/// Version copied from https://github.com/WojciechMula/sse4-strstr/blob/master/avx2-strstr-v2.cpp
-/// This version is somewhat not safe because it can read past the end of the haystack slice.
-#[cfg(target_arch = "x86_64")]
-#[allow(clippy::missing_safety_doc)]
+/// Original version copied from the [implementation by Wojciech
+/// Muła](http://0x80.pl/articles/simd-strfind.html). This version is somewhat not safe because it
+/// can read past the end of the haystack slice.
+#[target_feature(enable = "avx2")]
 pub unsafe fn strstr_avx2_original(haystack: &[u8], needle: &[u8]) -> bool {
     if haystack.len() < needle.len() {
         return false;
@@ -78,8 +78,8 @@ pub unsafe fn strstr_avx2_original(haystack: &[u8], needle: &[u8]) -> bool {
             needle.len(),
             memcmp2,
         ),
-        // Note: use memcmp4 rather memcmp3, as the last character
-        //       of needle is already proven to be equal
+        // Note: use memcmp4 rather memcmp3, as the last character of needle is already proven to be
+        // equal
         5 => strstr_avx2_original_memcmp(
             haystack.as_ptr(),
             haystack.len(),

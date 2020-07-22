@@ -1,10 +1,13 @@
+#![allow(deprecated)]
+
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use memmem::{Searcher, TwoWaySearcher};
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+use sliceslice::x86::avx2::{deprecated::*, *};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
 };
-use strstr::avx2::*;
 
 fn search_short_haystack(c: &mut Criterion) {
     let mut needles = BufReader::new(File::open("data/words.txt").unwrap())
@@ -51,59 +54,64 @@ fn search_short_haystack(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("strstr_avx2_original", |b| {
-        b.iter(|| {
-            for (i, needle) in needles.iter().enumerate() {
-                for haystack in &needles[i..] {
-                    black_box(unsafe {
-                        strstr_avx2_original(haystack.as_bytes(), needle.as_bytes())
-                    });
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        group.bench_function("strstr_avx2_original", |b| {
+            b.iter(|| {
+                for (i, needle) in needles.iter().enumerate() {
+                    for haystack in &needles[i..] {
+                        black_box(unsafe {
+                            strstr_avx2_original(haystack.as_bytes(), needle.as_bytes())
+                        });
+                    }
                 }
-            }
+            });
         });
-    });
 
-    group.bench_function("strstr_avx2_rust", |b| {
-        b.iter(|| {
-            for (i, needle) in needles.iter().enumerate() {
-                for haystack in &needles[i..] {
-                    black_box(strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes()));
+        group.bench_function("strstr_avx2_rust", |b| {
+            b.iter(|| {
+                for (i, needle) in needles.iter().enumerate() {
+                    for haystack in &needles[i..] {
+                        black_box(unsafe {
+                            strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes())
+                        });
+                    }
                 }
-            }
+            });
         });
-    });
 
-    group.bench_function("StrStrAVX2Searcher::search_in", |b| {
-        let searchers = needles
-            .iter()
-            .map(|&needle| StrStrAVX2Searcher::new(needle.as_bytes()))
-            .collect::<Vec<_>>();
+        group.bench_function("StrStrAVX2Searcher::search_in", |b| {
+            let searchers = needles
+                .iter()
+                .map(|&needle| unsafe { StrStrAVX2Searcher::new(needle.as_bytes()) })
+                .collect::<Vec<_>>();
 
-        b.iter(|| {
-            for (i, searcher) in searchers.iter().enumerate() {
-                for haystack in &needles[i..] {
-                    black_box(searcher.search_in(haystack.as_bytes()));
+            b.iter(|| {
+                for (i, searcher) in searchers.iter().enumerate() {
+                    for haystack in &needles[i..] {
+                        black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
+                    }
                 }
-            }
+            });
         });
-    });
 
-    group.bench_function("DynamicAvx2Searcher::search_in", |b| {
-        let searchers = needles
-            .iter()
-            .map(|&needle| unsafe {
-                DynamicAvx2Searcher::new(needle.as_bytes().to_owned().into_boxed_slice())
-            })
-            .collect::<Vec<_>>();
+        group.bench_function("DynamicAvx2Searcher::search_in", |b| {
+            let searchers = needles
+                .iter()
+                .map(|&needle| unsafe {
+                    DynamicAvx2Searcher::new(needle.as_bytes().to_owned().into_boxed_slice())
+                })
+                .collect::<Vec<_>>();
 
-        b.iter(|| {
-            for (i, searcher) in searchers.iter().enumerate() {
-                for haystack in &needles[i..] {
-                    black_box(searcher.search_in(haystack.as_bytes()));
+            b.iter(|| {
+                for (i, searcher) in searchers.iter().enumerate() {
+                    for haystack in &needles[i..] {
+                        black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
+                    }
                 }
-            }
+            });
         });
-    });
+    }
 
     group.finish();
 }
@@ -148,49 +156,54 @@ fn search_long_haystack(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("strstr_avx2_original", |b| {
-        b.iter(|| {
-            for needle in &needles {
-                black_box(unsafe { strstr_avx2_original(haystack.as_bytes(), needle.as_bytes()) });
-            }
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        group.bench_function("strstr_avx2_original", |b| {
+            b.iter(|| {
+                for needle in &needles {
+                    black_box(unsafe {
+                        strstr_avx2_original(haystack.as_bytes(), needle.as_bytes())
+                    });
+                }
+            });
         });
-    });
 
-    group.bench_function("strstr_avx2_rust", |b| {
-        b.iter(|| {
-            for needle in &needles {
-                black_box(strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes()));
-            }
+        group.bench_function("strstr_avx2_rust", |b| {
+            b.iter(|| {
+                for needle in &needles {
+                    black_box(unsafe { strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes()) });
+                }
+            });
         });
-    });
 
-    group.bench_function("StrStrAVX2Searcher::search_in", |b| {
-        let searchers = needles
-            .iter()
-            .map(|needle| StrStrAVX2Searcher::new(needle.as_bytes()))
-            .collect::<Vec<_>>();
+        group.bench_function("StrStrAVX2Searcher::search_in", |b| {
+            let searchers = needles
+                .iter()
+                .map(|needle| unsafe { StrStrAVX2Searcher::new(needle.as_bytes()) })
+                .collect::<Vec<_>>();
 
-        b.iter(|| {
-            for searcher in &searchers {
-                black_box(searcher.search_in(haystack.as_bytes()));
-            }
+            b.iter(|| {
+                for searcher in &searchers {
+                    black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
+                }
+            });
         });
-    });
 
-    group.bench_function("DynamicAvx2Searcher::search_in", |b| {
-        let searchers = needles
-            .iter()
-            .map(|needle| unsafe {
-                DynamicAvx2Searcher::new(needle.as_bytes().to_owned().into_boxed_slice())
-            })
-            .collect::<Vec<_>>();
+        group.bench_function("DynamicAvx2Searcher::search_in", |b| {
+            let searchers = needles
+                .iter()
+                .map(|needle| unsafe {
+                    DynamicAvx2Searcher::new(needle.as_bytes().to_owned().into_boxed_slice())
+                })
+                .collect::<Vec<_>>();
 
-        b.iter(|| {
-            for searcher in &searchers {
-                black_box(searcher.search_in(haystack.as_bytes()));
-            }
+            b.iter(|| {
+                for searcher in &searchers {
+                    black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
+                }
+            });
         });
-    });
+    }
 
     group.finish();
 }

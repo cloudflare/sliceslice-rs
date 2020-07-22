@@ -1,9 +1,12 @@
+#![allow(deprecated)]
+
 use memmem::{Searcher, TwoWaySearcher};
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+use sliceslice::x86::avx2::{deprecated::*, DynamicAvx2Searcher};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
 };
-use strstr::avx2::*;
 
 fn search(haystack: &str, needle: &str) {
     let result = haystack.find(&needle).is_some();
@@ -16,15 +19,18 @@ fn search(haystack: &str, needle: &str) {
 
     assert_eq!(twoway::find_bytes(haystack, needle).is_some(), result);
 
-    assert_eq!(unsafe { strstr_avx2_original(haystack, needle) }, result);
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        assert_eq!(unsafe { strstr_avx2_original(haystack, needle) }, result);
 
-    assert_eq!(strstr_avx2_rust(haystack, needle), result);
+        assert_eq!(unsafe { strstr_avx2_rust(haystack, needle) }, result);
 
-    let searcher = StrStrAVX2Searcher::new(needle);
-    assert_eq!(searcher.search_in(haystack), result);
+        let searcher = unsafe { StrStrAVX2Searcher::new(needle) };
+        assert_eq!(unsafe { searcher.search_in(haystack) }, result);
 
-    let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
-    assert_eq!(searcher.search_in(haystack), result);
+        let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
+        assert_eq!(unsafe { searcher.search_in(haystack) }, result);
+    }
 }
 
 #[test]
