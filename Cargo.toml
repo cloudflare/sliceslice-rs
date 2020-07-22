@@ -1,7 +1,7 @@
 [package]
 name = "sliceslice"
 version = "0.1.0"
-authors = ["adema"]
+authors = ["marmeladema <xademax@gmail.com>", "Zak Cutner <me@zakcutner.uk>"]
 edition = "2018"
 description = "A fast implementation of single-pattern substring search using SIMD acceleration"
 readme = "README.md"
