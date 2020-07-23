@@ -80,21 +80,6 @@ fn search_short_haystack(c: &mut Criterion) {
             });
         });
 
-        group.bench_function("StrStrAVX2Searcher::search_in", |b| {
-            let searchers = needles
-                .iter()
-                .map(|&needle| unsafe { StrStrAVX2Searcher::new(needle.as_bytes()) })
-                .collect::<Vec<_>>();
-
-            b.iter(|| {
-                for (i, searcher) in searchers.iter().enumerate() {
-                    for haystack in &needles[i..] {
-                        black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
-                    }
-                }
-            });
-        });
-
         group.bench_function("DynamicAvx2Searcher::search_in", |b| {
             let searchers = needles
                 .iter()
@@ -172,19 +157,6 @@ fn search_long_haystack(c: &mut Criterion) {
             b.iter(|| {
                 for needle in &needles {
                     black_box(unsafe { strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes()) });
-                }
-            });
-        });
-
-        group.bench_function("StrStrAVX2Searcher::search_in", |b| {
-            let searchers = needles
-                .iter()
-                .map(|needle| unsafe { StrStrAVX2Searcher::new(needle.as_bytes()) })
-                .collect::<Vec<_>>();
-
-            b.iter(|| {
-                for searcher in &searchers {
-                    black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
                 }
             });
         });
