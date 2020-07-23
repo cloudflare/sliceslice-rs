@@ -65,15 +65,6 @@ fn search(c: &mut Criterion) {
                 );
 
                 group.bench_with_input(
-                    BenchmarkId::new("StrStrAVX2Searcher::search_in", parameter),
-                    &size,
-                    |b, _| {
-                        let searcher = unsafe { StrStrAVX2Searcher::new(needle) };
-                        b.iter(|| black_box(unsafe { searcher.search_in(haystack) }));
-                    },
-                );
-
-                group.bench_with_input(
                     BenchmarkId::new("DynamicAvx2Searcher::search_in", parameter),
                     &size,
                     |b, _| {
