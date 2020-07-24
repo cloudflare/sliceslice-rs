@@ -10,7 +10,7 @@ A fast implementation of single-pattern substring search using SIMD acceleration
 ## Example
 
 ```rust
-use sliceslice::x86::avx2::DynamicAvx2Searcher;
+use sliceslice::x86::DynamicAvx2Searcher;
 
 fn main() {
     let searcher = unsafe { DynamicAvx2Searcher::new(b"ipsum".to_owned().into()) };

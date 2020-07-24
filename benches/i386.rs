@@ -1,9 +1,5 @@
-#![allow(deprecated)]
-
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use memmem::{Searcher, TwoWaySearcher};
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-use sliceslice::x86::avx2::{deprecated::*, *};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
@@ -29,7 +25,7 @@ fn search_short_haystack(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("TwoWaySearcher::search_in", |b| {
+    group.bench_function("memmem::TwoWaySearcher::search_in", |b| {
         let searchers = needles
             .iter()
             .map(|needle| TwoWaySearcher::new(needle.as_bytes()))
@@ -56,24 +52,14 @@ fn search_short_haystack(c: &mut Criterion) {
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
-        group.bench_function("strstr_avx2_original", |b| {
-            b.iter(|| {
-                for (i, needle) in needles.iter().enumerate() {
-                    for haystack in &needles[i..] {
-                        black_box(unsafe {
-                            strstr_avx2_original(haystack.as_bytes(), needle.as_bytes())
-                        });
-                    }
-                }
-            });
-        });
+        use sliceslice::x86::DynamicAvx2Searcher;
 
-        group.bench_function("strstr_avx2_rust", |b| {
+        group.bench_function("sse4_strstr::avx2_strstr_v2", |b| {
             b.iter(|| {
                 for (i, needle) in needles.iter().enumerate() {
                     for haystack in &needles[i..] {
                         black_box(unsafe {
-                            strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes())
+                            sse4_strstr::avx2_strstr_v2(haystack.as_bytes(), needle.as_bytes())
                         });
                     }
                 }
@@ -120,7 +106,7 @@ fn search_long_haystack(c: &mut Criterion) {
         });
     });
 
-    group.bench_function("TwoWaySearcher::search_in", |b| {
+    group.bench_function("memmem::TwoWaySearcher::search_in", |b| {
         let searchers = needles
             .iter()
             .map(|needle| TwoWaySearcher::new(needle.as_bytes()))
@@ -143,20 +129,14 @@ fn search_long_haystack(c: &mut Criterion) {
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
-        group.bench_function("strstr_avx2_original", |b| {
+        use sliceslice::x86::DynamicAvx2Searcher;
+
+        group.bench_function("sse4_strstr::avx2_strstr_v2", |b| {
             b.iter(|| {
                 for needle in &needles {
                     black_box(unsafe {
-                        strstr_avx2_original(haystack.as_bytes(), needle.as_bytes())
+                        sse4_strstr::avx2_strstr_v2(haystack.as_bytes(), needle.as_bytes())
                     });
-                }
-            });
-        });
-
-        group.bench_function("strstr_avx2_rust", |b| {
-            b.iter(|| {
-                for needle in &needles {
-                    black_box(unsafe { strstr_avx2_rust(haystack.as_bytes(), needle.as_bytes()) });
                 }
             });
         });

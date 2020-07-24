@@ -4,13 +4,18 @@ jobs:
   cargo:
     name: Cargo
     runs-on: ubuntu-latest
+    env:
+      CXX: clang++
+      LLVM_CONFIG_PATH: /usr/lib/llvm-9/bin/llvm-config
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: true
       - uses: actions-rs/toolchain@v1
         with:
           components: clippy, rustfmt
           default: true
-      - run: cargo fmt -- --check
-      - run: cargo build --all-targets --all-features
-      - run: cargo clippy --all-targets --all-features -- -D warnings
-      - run: cargo test --all-features
+      - run: cargo fmt --all -- --check
+      - run: cargo build --workspace --all-targets --all-features
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --workspace --all-features

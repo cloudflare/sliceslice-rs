@@ -1,10 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 
-/// Substring search implementations that are deprecated.
-#[deprecated = "Please use DynamicAvx2Searcher implementation instead"]
-pub mod deprecated;
-
-use crate::{bits, memchr::MemchrSearcher, memcmp};
+use crate::{bits, memcmp, MemchrSearcher};
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -462,7 +458,7 @@ impl DynamicAvx2Searcher {
 mod tests {
     use super::Avx2Searcher;
 
-    fn search(haystack: &[u8], needle: &[u8]) -> bool {
+    fn avx2_search(haystack: &[u8], needle: &[u8]) -> bool {
         let search = |position| unsafe {
             Avx2Searcher::with_position(needle.to_owned().into_boxed_slice(), position)
                 .search_in(haystack)
@@ -477,110 +473,110 @@ mod tests {
     }
 
     #[test]
-    fn search_same() {
-        assert!(search(b"foo", b"foo"));
+    fn avx2_search_same() {
+        assert!(avx2_search(b"foo", b"foo"));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit"
         ));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus"
         ));
     }
 
     #[test]
-    fn search_different() {
-        assert!(!search(b"bar", b"foo"));
+    fn avx2_search_different() {
+        assert!(!avx2_search(b"bar", b"foo"));
 
-        assert!(!search(
+        assert!(!avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"foo"
         ));
 
-        assert!(!search(
+        assert!(!avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"foo"
         ));
 
-        assert!(!search(
+        assert!(!avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"foo bar baz qux quux quuz corge grault garply waldo fred plugh xyzzy thud"
         ));
     }
 
     #[test]
-    fn search_prefix() {
-        assert!(search(b"foobar", b"foo"));
+    fn avx2_search_prefix() {
+        assert!(avx2_search(b"foobar", b"foo"));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"Lorem"
         ));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Lorem"
         ));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit"
         ));
     }
 
     #[test]
-    fn search_suffix() {
-        assert!(search(b"foobar", b"bar"));
+    fn avx2_search_suffix() {
+        assert!(avx2_search(b"foobar", b"bar"));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"elit"
         ));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"purus"
         ));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Aliquam iaculis fringilla mi, nec aliquet purus"
         ));
     }
 
     #[test]
-    fn search_mutiple() {
-        assert!(search(b"foobarfoo", b"foo"));
+    fn avx2_search_mutiple() {
+        assert!(avx2_search(b"foobarfoo", b"foo"));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"it"
         ));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"conse"
         ));
     }
 
     #[test]
-    fn search_middle() {
-        assert!(search(b"foobarfoo", b"bar"));
+    fn avx2_search_middle() {
+        assert!(avx2_search(b"foobarfoo", b"bar"));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"consectetur"
         ));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"orci"
         ));
 
-        assert!(search(
+        assert!(avx2_search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Maecenas commodo posuere orci a consectetur"
         ));
