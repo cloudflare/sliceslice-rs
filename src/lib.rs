@@ -1,6 +1,7 @@
-//! A fast implementation of single-pattern substring search using SIMD acceleration, based on the
-//! work [presented by Wojciech Muła](http://0x80.pl/articles/simd-strfind.html). For a
-//! fast multi-pattern substring search algorithm, see instead the [`aho-corasick`
+//! A fast implementation of single-pattern substring search using SIMD
+//! acceleration, based on the work [presented by Wojciech
+//! Muła](http://0x80.pl/articles/simd-strfind.html). For a fast multi-pattern
+//! substring search algorithm, see instead the [`aho-corasick`
 //! crate](https://github.com/BurntSushi/aho-corasick).
 //!
 //! # Example

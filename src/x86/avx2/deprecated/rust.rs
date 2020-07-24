@@ -81,8 +81,8 @@ fn strstr_rabin_karp(haystack: &[u8], needle: &[u8]) -> bool {
     false
 }
 
-/// Similar to `strstr_avx2_original` implementation, but adapted for safety to prevent reading past
-/// the end of the haystack.
+/// Similar to `strstr_avx2_original` implementation, but adapted for safety to
+/// prevent reading past the end of the haystack.
 #[target_feature(enable = "avx2")]
 pub unsafe fn strstr_avx2_rust(haystack: &[u8], needle: &[u8]) -> bool {
     match needle.len() {
