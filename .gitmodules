@@ -1,0 +1,3 @@
+[submodule "sse4-strstr/src/sse4-strstr"]
+	path = sse4-strstr/src/sse4-strstr
+	url = https://github.com/WojciechMula/sse4-strstr.git
