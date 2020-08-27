@@ -246,9 +246,12 @@ macro_rules! avx2_searcher {
                 let mut eq = (Vector::movemask_epi8(eq) & mask) as u32;
 
                 let start = start as usize - haystack.as_ptr() as usize;
+                let chunk = haystack.as_ptr().add(start + 1);
+                let needle = self.needle.as_ptr().add(1);
+
                 while eq != 0 {
-                    let chunk = &haystack[start + eq.trailing_zeros() as usize..];
-                    if $memcmp(&chunk[1..self.size()], &self.needle[1..]) {
+                    let chunk = chunk.add(eq.trailing_zeros() as usize);
+                    if $memcmp(chunk, needle, self.size() - 1) {
                         return true;
                     }
 

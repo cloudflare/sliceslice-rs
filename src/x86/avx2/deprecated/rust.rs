@@ -11,7 +11,7 @@ use std::arch::x86_64::*;
 unsafe fn strstr_avx2_rust_memcmp(
     haystack: &[u8],
     needle: &[u8],
-    memcmp: unsafe fn(&[u8], &[u8]) -> bool,
+    memcmp: unsafe fn(*const u8, *const u8, usize) -> bool,
 ) -> bool {
     if haystack.len() < 32 {
         return strstr_rabin_karp(haystack, needle);
@@ -35,8 +35,9 @@ unsafe fn strstr_avx2_rust_memcmp(
             let startpos = i + bitpos;
             if startpos + needle.len() <= haystack.len()
                 && memcmp(
-                    &haystack[(startpos + 1)..(startpos + needle.len() - 1)],
-                    &needle[1..needle.len() - 1],
+                    haystack.as_ptr().add(startpos + 1),
+                    needle.as_ptr().add(1),
+                    needle.len() - 2,
                 )
             {
                 return true;
@@ -90,11 +91,11 @@ pub unsafe fn strstr_avx2_rust(haystack: &[u8], needle: &[u8]) -> bool {
         2 => strstr_avx2_rust_memcmp(haystack, needle, memcmp0),
         3 => strstr_avx2_rust_memcmp(haystack, needle, memcmp1),
         4 => strstr_avx2_rust_memcmp(haystack, needle, memcmp2),
-        5 => strstr_avx2_rust_memcmp(haystack, needle, memcmp4),
+        5 => strstr_avx2_rust_memcmp(haystack, needle, memcmp3),
         6 => strstr_avx2_rust_memcmp(haystack, needle, memcmp4),
         7 => strstr_avx2_rust_memcmp(haystack, needle, memcmp5),
         8 => strstr_avx2_rust_memcmp(haystack, needle, memcmp6),
-        9 => strstr_avx2_rust_memcmp(haystack, needle, memcmp8),
+        9 => strstr_avx2_rust_memcmp(haystack, needle, memcmp7),
         10 => strstr_avx2_rust_memcmp(haystack, needle, memcmp8),
         11 => strstr_avx2_rust_memcmp(haystack, needle, memcmp9),
         12 => strstr_avx2_rust_memcmp(haystack, needle, memcmp10),

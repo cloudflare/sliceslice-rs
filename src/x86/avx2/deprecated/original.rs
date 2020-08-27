@@ -3,7 +3,6 @@ use crate::{bits::clear_leftmost_set, memcmp::*};
 use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
-use std::slice::from_raw_parts;
 
 #[inline]
 #[target_feature(enable = "avx2")]
@@ -12,7 +11,7 @@ unsafe fn strstr_avx2_original_memcmp(
     n: usize,
     needle: *const u8,
     k: usize,
-    memcmp: unsafe fn(&[u8], &[u8]) -> bool,
+    memcmp: unsafe fn(*const u8, *const u8, usize) -> bool,
 ) -> Option<usize> {
     let first = _mm256_set1_epi8(*needle as i8);
     let last = _mm256_set1_epi8(*needle.add(k - 1) as i8);
@@ -32,10 +31,7 @@ unsafe fn strstr_avx2_original_memcmp(
         while mask != 0 {
             let bitpos = mask.trailing_zeros() as usize;
             let startpos = i + bitpos + 1;
-            if memcmp(
-                from_raw_parts(haystack.add(startpos), k - 2),
-                from_raw_parts(needle.add(1), k - 2),
-            ) {
+            if memcmp(haystack.add(startpos), needle.add(1), k - 2) {
                 return Some(i + bitpos);
             }
             mask = clear_leftmost_set(mask);
@@ -78,14 +74,12 @@ pub unsafe fn strstr_avx2_original(haystack: &[u8], needle: &[u8]) -> bool {
             needle.len(),
             memcmp2,
         ),
-        // Note: use memcmp4 rather memcmp3, as the last character of needle is already proven to be
-        // equal
         5 => strstr_avx2_original_memcmp(
             haystack.as_ptr(),
             haystack.len(),
             needle.as_ptr(),
             needle.len(),
-            memcmp4,
+            memcmp3,
         ),
         6 => strstr_avx2_original_memcmp(
             haystack.as_ptr(),
@@ -108,13 +102,12 @@ pub unsafe fn strstr_avx2_original(haystack: &[u8], needle: &[u8]) -> bool {
             needle.len(),
             memcmp6,
         ),
-        // Note: use memcmp8 rather memcmp7 for the same reason as above.
         9 => strstr_avx2_original_memcmp(
             haystack.as_ptr(),
             haystack.len(),
             needle.as_ptr(),
             needle.len(),
-            memcmp8,
+            memcmp7,
         ),
         10 => strstr_avx2_original_memcmp(
             haystack.as_ptr(),
