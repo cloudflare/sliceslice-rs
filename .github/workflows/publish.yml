@@ -10,6 +10,8 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
+      - name: Check version number
+        run: ./scripts/check-version.sh
       - name: Login to registry
         uses: actions-rs/cargo@v1
         env:
