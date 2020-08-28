@@ -1,4 +1,3 @@
-use memmem::{Searcher, TwoWaySearcher};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
@@ -10,19 +9,9 @@ fn search(haystack: &str, needle: &str) {
     let haystack = haystack.as_bytes();
     let needle = needle.as_bytes();
 
-    let searcher = TwoWaySearcher::new(needle);
-    assert_eq!(searcher.search_in(haystack).is_some(), result);
-
-    assert_eq!(twoway::find_bytes(haystack, needle).is_some(), result);
-
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
         use sliceslice::x86::DynamicAvx2Searcher;
-
-        assert_eq!(
-            unsafe { sse4_strstr::avx2_strstr_v2(haystack, needle).is_some() },
-            result
-        );
 
         let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
         assert_eq!(unsafe { searcher.search_in(haystack) }, result);
