@@ -1,6 +1,6 @@
 # sliceslice
 
-[![Actions](https://github.com/marmeladema/sliceslice-rs/workflows/Check/badge.svg)](https://github.com/marmeladema/sliceslice-rs/actions)
+[![Actions](https://github.com/cloudflare/sliceslice-rs/workflows/Check/badge.svg)](https://github.com/cloudflare/sliceslice-rs/actions)
 [![Crate](https://img.shields.io/crates/v/sliceslice)](https://crates.io/crates/sliceslice)
 [![Docs](https://docs.rs/sliceslice/badge.svg)](https://docs.rs/sliceslice)
 [![License](https://img.shields.io/crates/l/sliceslice)](LICENSE)

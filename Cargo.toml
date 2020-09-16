@@ -5,7 +5,7 @@ authors = ["marmeladema <xademax@gmail.com>", "Zak Cutner <me@zakcutner.uk>"]
 edition = "2018"
 description = "A fast implementation of single-pattern substring search using SIMD acceleration"
 readme = "README.md"
-repository = "https://github.com/marmeladema/sliceslice-rs"
+repository = "https://github.com/cloudflare/sliceslice-rs"
 license = "MIT"
 keywords = ["search", "text", "string", "single", "simd"]
 
