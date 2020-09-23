@@ -29,6 +29,28 @@ mod bits;
 mod memcmp;
 
 use memchr::memchr;
+use seq_macro::seq;
+
+/// Needle that can be searched for within a haystack. It is used to allow
+/// specialized searcher implementations for compile-time needle lengths.
+pub trait Needle: AsRef<[u8]> {
+    /// Set to `true` if and only if the needle length is fixed at compile time.
+    const IS_FIXED: bool = false;
+}
+
+impl<N: Needle + ?Sized> Needle for &N {
+    const IS_FIXED: bool = N::IS_FIXED;
+}
+
+impl Needle for [u8] {}
+
+seq!(N in 0..=32 {
+    impl Needle for [u8; N] {
+        const IS_FIXED: bool = true;
+    }
+});
+
+impl Needle for Box<[u8]> {}
 
 /// Single-byte searcher using `memchr` for faster matching.
 pub struct MemchrSearcher(u8);

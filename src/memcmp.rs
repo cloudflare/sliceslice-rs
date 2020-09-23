@@ -1,173 +1,117 @@
-#![allow(dead_code)]
-
+use crate::Needle;
 use std::slice;
 
 #[inline]
-pub unsafe fn memcmp0(_: *const u8, _: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 0);
+unsafe fn memcmp0(_: *const u8, _: *const u8) -> bool {
     true
 }
 
 #[inline]
-pub unsafe fn memcmp1(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 1);
+unsafe fn memcmp1(left: *const u8, right: *const u8) -> bool {
     *left == *right
 }
 
 #[inline]
-pub unsafe fn memcmp2(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 2);
-    let left = left.cast::<u16>();
-    let right = right.cast::<u16>();
-    *left == *right
+unsafe fn memcmp2(left: *const u8, right: *const u8) -> bool {
+    *left.cast::<u16>() == *right.cast::<u16>()
 }
 
 #[inline]
-pub unsafe fn memcmp3(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 3);
-    memcmp2(left, right, 2) && memcmp1(left.add(2), right.add(2), 1)
+unsafe fn memcmp3(left: *const u8, right: *const u8) -> bool {
+    memcmp2(left, right) && memcmp1(left.add(2), right.add(2))
 }
 
 #[inline]
-pub unsafe fn memcmp4(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 4);
-    let left = left.cast::<u32>();
-    let right = right.cast::<u32>();
-    *left == *right
+unsafe fn memcmp4(left: *const u8, right: *const u8) -> bool {
+    *left.cast::<u32>() == *right.cast::<u32>()
 }
 
 #[inline]
-pub unsafe fn memcmp5(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 5);
-    memcmp4(left, right, 4) && memcmp1(left.add(4), right.add(4), 1)
+unsafe fn memcmp5(left: *const u8, right: *const u8) -> bool {
+    memcmp4(left, right) && memcmp1(left.add(4), right.add(4))
 }
 
 #[inline]
-pub unsafe fn memcmp6(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 6);
-    memcmp4(left, right, 4) && memcmp2(left.add(4), right.add(4), 2)
+unsafe fn memcmp6(left: *const u8, right: *const u8) -> bool {
+    memcmp4(left, right) && memcmp2(left.add(4), right.add(4))
 }
 
 #[inline]
-pub unsafe fn memcmp7(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 7);
-    memcmp4(left, right, 4) && memcmp3(left.add(4), right.add(4), 3)
+unsafe fn memcmp7(left: *const u8, right: *const u8) -> bool {
+    memcmp4(left, right) && memcmp3(left.add(4), right.add(4))
 }
 
 #[inline]
-pub unsafe fn memcmp8(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 8);
-    let left = left.cast::<u64>();
-    let right = right.cast::<u64>();
-    *left == *right
+unsafe fn memcmp8(left: *const u8, right: *const u8) -> bool {
+    *left.cast::<u64>() == *right.cast::<u64>()
 }
 
 #[inline]
-pub unsafe fn memcmp9(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 9);
-    memcmp8(left, right, 8) && memcmp1(left.add(8), right.add(8), 1)
+unsafe fn memcmp9(left: *const u8, right: *const u8) -> bool {
+    memcmp8(left, right) && memcmp1(left.add(8), right.add(8))
 }
 
 #[inline]
-pub unsafe fn memcmp10(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 10);
-    memcmp8(left, right, 8) && memcmp2(left.add(8), right.add(8), 2)
+unsafe fn memcmp10(left: *const u8, right: *const u8) -> bool {
+    memcmp8(left, right) && memcmp2(left.add(8), right.add(8))
 }
 
 #[inline]
-pub unsafe fn memcmp11(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 11);
-    memcmp8(left, right, 8) && memcmp3(left.add(8), right.add(8), 3)
+unsafe fn memcmp11(left: *const u8, right: *const u8) -> bool {
+    memcmp8(left, right) && memcmp3(left.add(8), right.add(8))
 }
 
 #[inline]
-pub unsafe fn memcmp12(left: *const u8, right: *const u8, n: usize) -> bool {
-    debug_assert_eq!(n, 12);
-    memcmp8(left, right, 8) && memcmp4(left.add(8), right.add(8), 4)
+unsafe fn memcmp12(left: *const u8, right: *const u8) -> bool {
+    memcmp8(left, right) && memcmp4(left.add(8), right.add(8))
 }
 
 #[inline]
-pub unsafe fn memcmp(left: *const u8, right: *const u8, n: usize) -> bool {
+pub unsafe fn memcmp<N: Needle + ?Sized>(left: *const u8, right: *const u8, n: usize) -> bool {
+    if N::IS_FIXED {
+        match n {
+            0 => return memcmp0(left, right),
+            1 => return memcmp1(left, right),
+            2 => return memcmp2(left, right),
+            3 => return memcmp3(left, right),
+            4 => return memcmp4(left, right),
+            5 => return memcmp5(left, right),
+            6 => return memcmp6(left, right),
+            7 => return memcmp7(left, right),
+            8 => return memcmp8(left, right),
+            9 => return memcmp9(left, right),
+            10 => return memcmp10(left, right),
+            11 => return memcmp11(left, right),
+            12 => return memcmp12(left, right),
+            _ => {}
+        }
+    }
+
     slice::from_raw_parts(left, n) == slice::from_raw_parts(right, n)
 }
 
 #[cfg(test)]
 mod tests {
-    fn memcmp(f: unsafe fn(*const u8, *const u8, usize) -> bool, n: usize) {
+    use paste::paste;
+    use seq_macro::seq;
+
+    fn memcmp(f: unsafe fn(*const u8, *const u8) -> bool, n: usize) {
         let left = vec![b'0'; n];
-        unsafe { assert!(f(left.as_ptr(), left.as_ptr(), n)) };
-        unsafe { assert!(super::memcmp(left.as_ptr(), left.as_ptr(), n)) };
+        unsafe { assert!(f(left.as_ptr(), left.as_ptr())) };
 
         for i in 0..n {
             let mut right = left.clone();
             right[i] = b'1';
-            unsafe { assert!(!f(left.as_ptr(), right.as_ptr(), n)) };
-            unsafe { assert!(!super::memcmp(left.as_ptr(), right.as_ptr(), n)) };
+            unsafe { assert!(!f(left.as_ptr(), right.as_ptr())) };
         }
     }
 
-    #[test]
-    fn memcmp0() {
-        memcmp(super::memcmp0, 0);
-    }
-
-    #[test]
-    fn memcmp1() {
-        memcmp(super::memcmp1, 1);
-    }
-
-    #[test]
-    fn memcmp2() {
-        memcmp(super::memcmp2, 2);
-    }
-
-    #[test]
-    fn memcmp3() {
-        memcmp(super::memcmp3, 3);
-    }
-
-    #[test]
-    fn memcmp4() {
-        memcmp(super::memcmp4, 4);
-    }
-
-    #[test]
-    fn memcmp5() {
-        memcmp(super::memcmp5, 5);
-    }
-
-    #[test]
-    fn memcmp6() {
-        memcmp(super::memcmp6, 6);
-    }
-
-    #[test]
-    fn memcmp7() {
-        memcmp(super::memcmp7, 7);
-    }
-
-    #[test]
-    fn memcmp8() {
-        memcmp(super::memcmp8, 8);
-    }
-
-    #[test]
-    fn memcmp9() {
-        memcmp(super::memcmp9, 9);
-    }
-
-    #[test]
-    fn memcmp10() {
-        memcmp(super::memcmp10, 10);
-    }
-
-    #[test]
-    fn memcmp11() {
-        memcmp(super::memcmp11, 11);
-    }
-
-    #[test]
-    fn memcmp12() {
-        memcmp(super::memcmp12, 12);
-    }
+    seq!(N in 0..=12 {
+        paste! {
+            #[test]
+            fn [<memcmp N>]() {
+                memcmp(super::[<memcmp N>], N);
+            }
+        }
+    });
 }
