@@ -8,26 +8,7 @@ readme = "README.md"
 repository = "https://github.com/cloudflare/sliceslice-rs"
 license = "MIT"
 keywords = ["search", "text", "string", "single", "simd"]
-
-[lib]
-bench = false
+include = ["src/**/*", "tests/**/*", "README.md", "LICENSE", "Cargo.toml"]
 
 [dependencies]
 memchr = "2.3"
-
-[dev-dependencies]
-criterion = "0.3"
-memmem = "0.1"
-sse4-strstr = { path = "sse4-strstr" }
-twoway = "0.2"
-
-[[bench]]
-name = "i386"
-harness = false
-
-[[bench]]
-name = "random"
-harness = false
-
-[profile.release]
-debug = true

@@ -1,0 +1,28 @@
+[package]
+name = "sliceslice-bench"
+version = "0.0.0"
+publish = false
+
+[profile.release]
+debug = true
+
+[[bench]]
+name = "i386"
+harness = false
+
+[[bench]]
+name = "random"
+harness = false
+
+[dependencies]
+criterion = "0.3"
+memmem = "0.1"
+sse4-strstr = { path = "sse4-strstr" }
+twoway = "0.2"
+
+[dependencies.sliceslice]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]

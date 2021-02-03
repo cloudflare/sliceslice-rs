@@ -6,7 +6,7 @@ use std::{
 };
 
 fn search_short_haystack(c: &mut Criterion) {
-    let mut needles = BufReader::new(File::open("data/words.txt").unwrap())
+    let mut needles = BufReader::new(File::open("../data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
@@ -88,10 +88,10 @@ fn search_short_haystack(c: &mut Criterion) {
 }
 
 fn search_long_haystack(c: &mut Criterion) {
-    let haystack = fs::read("data/i386.txt").unwrap();
+    let haystack = fs::read("../data/i386.txt").unwrap();
     let haystack = String::from_utf8_lossy(&haystack);
 
-    let needles = BufReader::new(File::open("data/words.txt").unwrap())
+    let needles = BufReader::new(File::open("../data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
