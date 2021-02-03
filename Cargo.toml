@@ -12,3 +12,7 @@ include = ["src/**/*", "tests/**/*", "README.md", "LICENSE", "Cargo.toml"]
 
 [dependencies]
 memchr = "2.3"
+
+[dev-dependencies]
+paste = "1"
+seq-macro = "0.2"

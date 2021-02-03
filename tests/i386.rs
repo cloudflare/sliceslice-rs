@@ -13,7 +13,7 @@ fn search(haystack: &str, needle: &str) {
     {
         use sliceslice::x86::DynamicAvx2Searcher;
 
-        let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
+        let searcher = unsafe { DynamicAvx2Searcher::new(needle) };
         assert_eq!(unsafe { searcher.search_in(haystack) }, result);
     }
 }

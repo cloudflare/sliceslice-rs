@@ -9,7 +9,7 @@
 //! ```
 //! use sliceslice::x86::DynamicAvx2Searcher;
 //!
-//! let searcher = unsafe { DynamicAvx2Searcher::new(b"ipsum".to_owned().into()) };
+//! let searcher = unsafe { DynamicAvx2Searcher::new(b"ipsum") };
 //!
 //! assert!(unsafe {
 //!     searcher.search_in(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit")
@@ -19,6 +19,7 @@
 //!     searcher.search_in(b"foo bar baz qux quux quuz corge grault garply waldo fred")
 //! });
 
+#![cfg_attr(not(test), no_std)]
 #![warn(missing_docs)]
 
 /// Substring search implementations using x86 architecture features.
