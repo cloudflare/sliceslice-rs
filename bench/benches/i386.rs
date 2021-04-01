@@ -1,12 +1,12 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use memmem::{Searcher, TwoWaySearcher};
 use std::{
-    fs::{self, File},
+    fs::File,
     io::{BufRead, BufReader},
 };
 
 fn search_short_haystack(c: &mut Criterion) {
-    let mut needles = BufReader::new(File::open("data/words.txt").unwrap())
+    let mut needles = BufReader::new(File::open("../data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
@@ -88,10 +88,9 @@ fn search_short_haystack(c: &mut Criterion) {
 }
 
 fn search_long_haystack(c: &mut Criterion) {
-    let haystack = fs::read("data/i386.txt").unwrap();
-    let haystack = String::from_utf8_lossy(&haystack);
+    let haystack = include_str!("../../data/haystack");
 
-    let needles = BufReader::new(File::open("data/words.txt").unwrap())
+    let needles = BufReader::new(File::open("../data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
