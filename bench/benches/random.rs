@@ -2,8 +2,8 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use memmem::{Searcher, TwoWaySearcher};
 
 fn search(c: &mut Criterion) {
-    let haystack = include_str!("../data/haystack");
-    let needle = include_str!("../data/needle");
+    let haystack = include_str!("../../data/haystack");
+    let needle = include_str!("../../data/needle");
 
     let sizes = [1, 5, 10, 20, 50, 100, 1000];
 
