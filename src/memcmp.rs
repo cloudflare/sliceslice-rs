@@ -19,7 +19,7 @@ pub unsafe fn memcmp2(left: *const u8, right: *const u8, n: usize) -> bool {
     debug_assert_eq!(n, 2);
     let left = left.cast::<u16>();
     let right = right.cast::<u16>();
-    *left == *right
+    left.read_unaligned() == right.read_unaligned()
 }
 
 #[inline]
@@ -33,7 +33,7 @@ pub unsafe fn memcmp4(left: *const u8, right: *const u8, n: usize) -> bool {
     debug_assert_eq!(n, 4);
     let left = left.cast::<u32>();
     let right = right.cast::<u32>();
-    *left == *right
+    left.read_unaligned() == right.read_unaligned()
 }
 
 #[inline]
@@ -59,7 +59,7 @@ pub unsafe fn memcmp8(left: *const u8, right: *const u8, n: usize) -> bool {
     debug_assert_eq!(n, 8);
     let left = left.cast::<u64>();
     let right = right.cast::<u64>();
-    *left == *right
+    left.read_unaligned() == right.read_unaligned()
 }
 
 #[inline]
