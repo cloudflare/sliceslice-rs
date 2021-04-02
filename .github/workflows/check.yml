@@ -4,13 +4,8 @@ jobs:
   cargo:
     name: Cargo
     runs-on: ubuntu-latest
-    env:
-      CXX: clang++
-      LLVM_CONFIG_PATH: /usr/lib/llvm-9/bin/llvm-config
     steps:
       - uses: actions/checkout@v2
-        with:
-          submodules: true
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -50,3 +45,32 @@ jobs:
         with:
           command: test
           args: --workspace --all-features --target x86_64-unknown-linux-gnu -Zbuild-std
+  bench:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    env:
+      CXX: clang++
+      LLVM_CONFIG_PATH: /usr/lib/llvm-9/bin/llvm-config
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          components: clippy, rustfmt
+      - name: Run rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --manifest-path bench/Cargo.toml --all -- --check
+      - name: Build all targets
+        uses: actions-rs/cargo@v1
+        with:
+          command: bench
+          args: --manifest-path bench/Cargo.toml --workspace --no-run --all-targets --all-features
+      - name: Run Clippy linter
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path bench/Cargo.toml --workspace --all-targets --all-features -- -D warnings
