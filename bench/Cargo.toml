@@ -8,7 +8,7 @@ publish = false
 criterion = "0.3"
 memmem = "0.1"
 sliceslice = { path = ".." }
-sse4-strstr = { path = "sse4-strstr" }
+sse4-strstr = { path = "sse4-strstr", optional = true }
 twoway = "0.2"
 
 [[bench]]
