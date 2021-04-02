@@ -3,16 +3,21 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-fn search(haystack: &str, needle: &str) {
-    let result = haystack.contains(&needle);
+fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack
+        .windows(needle.len())
+        .position(|window| window == needle)
+}
 
+fn search(haystack: &str, needle: &str) {
     let haystack = haystack.as_bytes();
     let needle = needle.as_bytes();
+
+    let result = find_subsequence(haystack, needle).is_some();
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
         use sliceslice::x86::DynamicAvx2Searcher;
-
         let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
         assert_eq!(unsafe { searcher.search_in(haystack) }, result);
     }

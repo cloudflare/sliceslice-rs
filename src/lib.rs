@@ -29,6 +29,80 @@ mod bits;
 mod memcmp;
 
 use memchr::memchr;
+use std::rc::Rc;
+use std::sync::Arc;
+
+/// Needle that can be searched for within a haystack. It allows specialized
+/// searcher implementations for needle sizes known at compile time.
+pub trait Needle {
+    /// Set to `Some(<usize>)` if and only if the needle's length is known at compile time.
+    const SIZE: Option<usize>;
+    /// Return the slice corresponding to the needle.
+    fn as_bytes(&self) -> &[u8];
+}
+
+impl<const N: usize> Needle for [u8; N] {
+    const SIZE: Option<usize> = Some(N);
+
+    #[inline]
+    fn as_bytes(&self) -> &[u8] {
+        self
+    }
+}
+
+impl Needle for [u8] {
+    const SIZE: Option<usize> = None;
+
+    #[inline]
+    fn as_bytes(&self) -> &[u8] {
+        self
+    }
+}
+
+impl<N: Needle + ?Sized> Needle for Box<N> {
+    const SIZE: Option<usize> = N::SIZE;
+
+    #[inline]
+    fn as_bytes(&self) -> &[u8] {
+        (**self).as_bytes()
+    }
+}
+
+impl<N: Needle + ?Sized> Needle for Rc<N> {
+    const SIZE: Option<usize> = N::SIZE;
+
+    #[inline]
+    fn as_bytes(&self) -> &[u8] {
+        (**self).as_bytes()
+    }
+}
+
+impl<N: Needle + ?Sized> Needle for Arc<N> {
+    const SIZE: Option<usize> = N::SIZE;
+
+    #[inline]
+    fn as_bytes(&self) -> &[u8] {
+        (**self).as_bytes()
+    }
+}
+
+impl<N: Needle + ?Sized> Needle for &N {
+    const SIZE: Option<usize> = N::SIZE;
+
+    #[inline]
+    fn as_bytes(&self) -> &[u8] {
+        (*self).as_bytes()
+    }
+}
+
+impl Needle for Vec<u8> {
+    const SIZE: Option<usize> = None;
+
+    #[inline]
+    fn as_bytes(&self) -> &[u8] {
+        self
+    }
+}
 
 /// Single-byte searcher using `memchr` for faster matching.
 pub struct MemchrSearcher(u8);
@@ -57,7 +131,7 @@ impl MemchrSearcher {
 
 #[cfg(test)]
 mod tests {
-    use super::MemchrSearcher;
+    use super::{MemchrSearcher, Needle};
 
     fn memchr_search(haystack: &[u8], needle: &[u8]) -> bool {
         MemchrSearcher::new(needle[0]).search_in(haystack)
@@ -91,5 +165,37 @@ mod tests {
     #[test]
     fn memchr_search_middle() {
         assert!(memchr_search(b"foobarfoo", b"b"));
+    }
+
+    #[test]
+    fn needle_array_size() {
+        use std::rc::Rc;
+        use std::sync::Arc;
+
+        assert_eq!(<[u8; 0] as Needle>::SIZE, Some(0));
+
+        assert_eq!(Box::<[u8; 1]>::SIZE, Some(1));
+
+        assert_eq!(Rc::<[u8; 2]>::SIZE, Some(2));
+
+        assert_eq!(Arc::<[u8; 3]>::SIZE, Some(3));
+
+        assert_eq!(<&[u8; 4] as Needle>::SIZE, Some(4));
+    }
+
+    #[test]
+    fn needle_slice_size() {
+        use std::rc::Rc;
+        use std::sync::Arc;
+
+        assert_eq!(Box::<[u8]>::SIZE, None);
+
+        assert_eq!(Vec::<u8>::SIZE, None);
+
+        assert_eq!(Rc::<[u8]>::SIZE, None);
+
+        assert_eq!(Arc::<[u8]>::SIZE, None);
+
+        assert_eq!(<&[u8] as Needle>::SIZE, None);
     }
 }
