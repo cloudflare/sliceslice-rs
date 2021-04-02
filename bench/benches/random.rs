@@ -1,7 +1,12 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{
+    black_box, criterion_group, criterion_main,
+    measurement::{Measurement, WallTime},
+    BenchmarkId, Criterion,
+};
+use criterion_linux_perf::{PerfMeasurement, PerfMode};
 use memmem::{Searcher, TwoWaySearcher};
 
-fn search(c: &mut Criterion) {
+fn search<M: Measurement>(c: &mut Criterion<M>) {
     let haystack = include_str!("../../data/haystack");
     let needle = include_str!("../../data/needle");
 
@@ -75,5 +80,15 @@ fn search(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, search);
-criterion_main!(benches);
+criterion_group!(
+    name = random_wall_time;
+    config = Criterion::default().with_measurement(WallTime);
+    targets = search
+);
+criterion_group!(
+    name = random_perf_instructions;
+    config = Criterion::default().with_measurement(PerfMeasurement::new(PerfMode::Instructions));
+    targets = search
+);
+
+criterion_main!(random_wall_time, random_perf_instructions);
