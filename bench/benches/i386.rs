@@ -54,6 +54,7 @@ fn search_short_haystack(c: &mut Criterion) {
     {
         use sliceslice::x86::DynamicAvx2Searcher;
 
+        #[cfg(feature = "sse4-strstr")]
         group.bench_function("sse4_strstr::avx2_strstr_v2", |b| {
             b.iter(|| {
                 for (i, needle) in needles.iter().enumerate() {
@@ -130,6 +131,7 @@ fn search_long_haystack(c: &mut Criterion) {
     {
         use sliceslice::x86::DynamicAvx2Searcher;
 
+        #[cfg(feature = "sse4-strstr")]
         group.bench_function("sse4_strstr::avx2_strstr_v2", |b| {
             b.iter(|| {
                 for needle in &needles {

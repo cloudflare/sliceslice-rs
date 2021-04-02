@@ -47,6 +47,7 @@ fn search(c: &mut Criterion) {
             {
                 use sliceslice::x86::DynamicAvx2Searcher;
 
+                #[cfg(feature = "sse4-strstr")]
                 group.bench_with_input(
                     BenchmarkId::new("sse4_strstr::avx2_strstr_v2", parameter),
                     &size,
