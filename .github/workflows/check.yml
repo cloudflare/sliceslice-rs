@@ -33,7 +33,7 @@ jobs:
       - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2020-08-28
+          toolchain: nightly
           override: true
           components: rust-src
       - name: Run tests with address sanitizer
