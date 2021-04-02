@@ -1,11 +1,16 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{
+    black_box, criterion_group, criterion_main,
+    measurement::{Measurement, WallTime},
+    Criterion,
+};
+use criterion_linux_perf::{PerfMeasurement, PerfMode};
 use memmem::{Searcher, TwoWaySearcher};
 use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
 
-fn search_short_haystack(c: &mut Criterion) {
+fn search_short_haystack<M: Measurement>(c: &mut Criterion<M>) {
     let mut needles = BufReader::new(File::open("../data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
@@ -88,7 +93,7 @@ fn search_short_haystack(c: &mut Criterion) {
     group.finish();
 }
 
-fn search_long_haystack(c: &mut Criterion) {
+fn search_long_haystack<M: Measurement>(c: &mut Criterion<M>) {
     let haystack = include_str!("../../data/haystack");
 
     let needles = BufReader::new(File::open("../data/words.txt").unwrap())
@@ -161,5 +166,15 @@ fn search_long_haystack(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, search_short_haystack, search_long_haystack);
-criterion_main!(benches);
+criterion_group!(
+    name = i386_wall_time;
+    config = Criterion::default().with_measurement(WallTime);
+    targets = search_short_haystack, search_long_haystack
+);
+criterion_group!(
+    name = i386_perf_instructions;
+    config = Criterion::default().with_measurement(PerfMeasurement::new(PerfMode::Instructions));
+    targets = search_short_haystack, search_long_haystack
+);
+
+criterion_main!(i386_wall_time, i386_perf_instructions);
