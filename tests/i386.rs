@@ -4,7 +4,7 @@ use std::{
 };
 
 fn search(haystack: &str, needle: &str) {
-    let result = haystack.find(&needle).is_some();
+    let result = haystack.contains(&needle);
 
     let haystack = haystack.as_bytes();
     let needle = needle.as_bytes();
