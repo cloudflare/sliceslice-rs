@@ -20,5 +20,6 @@ harness = false
 name = "random"
 harness = false
 
-[profile.release]
-debug = true
+[profile.bench]
+codegen-units = 1
+lto = true
