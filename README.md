@@ -27,7 +27,7 @@ fn main() {
 
 ## Benchmarks
 
-We ran the **[`i386` benchmarks](benches/i386.rs)** on an **HP EliteDesk 800 G2 Tower PC** with an **Intel Core i7-6700 Processor @ 3.40GHz**, **16GB of RAM** and **512GB** of disk space, running **Ubuntu 20.04.1 LTS**, **gcc 9.3.0** and **Rust 1.46.0**.
+We ran the **[`i386` benchmarks](bench/benches/i386.rs)** on an **HP EliteDesk 800 G2 Tower PC** with an **Intel Core i7-6700 Processor @ 3.40GHz**, **16GB of RAM** and **512GB** of disk space, running **Ubuntu 20.04.1 LTS**, **gcc 9.3.0** and **Rust 1.46.0**.
 
 | **Library**                                                   | **Version**   | **Function**                                                                                                                           | **Short haystack**                  | **Long haystack**                   |
 | ------------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------- |
