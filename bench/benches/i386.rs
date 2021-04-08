@@ -3,6 +3,7 @@ use criterion::{
     measurement::{Measurement, WallTime},
     Criterion,
 };
+#[cfg(target_os = "linux")]
 use criterion_linux_perf::{PerfMeasurement, PerfMode};
 use memmem::{Searcher, TwoWaySearcher};
 use std::{
@@ -171,10 +172,16 @@ criterion_group!(
     config = Criterion::default().with_measurement(WallTime);
     targets = search_short_haystack, search_long_haystack
 );
+
+#[cfg(target_os = "linux")]
 criterion_group!(
     name = i386_perf_instructions;
     config = Criterion::default().with_measurement(PerfMeasurement::new(PerfMode::Instructions));
     targets = search_short_haystack, search_long_haystack
 );
 
+#[cfg(target_os = "linux")]
 criterion_main!(i386_wall_time, i386_perf_instructions);
+
+#[cfg(not(target_os = "linux"))]
+criterion_main!(i386_wall_time);

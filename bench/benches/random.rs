@@ -3,6 +3,7 @@ use criterion::{
     measurement::{Measurement, WallTime},
     BenchmarkId, Criterion,
 };
+#[cfg(target_os = "linux")]
 use criterion_linux_perf::{PerfMeasurement, PerfMode};
 use memmem::{Searcher, TwoWaySearcher};
 
@@ -85,10 +86,16 @@ criterion_group!(
     config = Criterion::default().with_measurement(WallTime);
     targets = search
 );
+
+#[cfg(target_os = "linux")]
 criterion_group!(
     name = random_perf_instructions;
     config = Criterion::default().with_measurement(PerfMeasurement::new(PerfMode::Instructions));
     targets = search
 );
 
+#[cfg(target_os = "linux")]
 criterion_main!(random_wall_time, random_perf_instructions);
+
+#[cfg(not(target_os = "linux"))]
+criterion_main!(random_wall_time);
