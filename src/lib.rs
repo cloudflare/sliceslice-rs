@@ -18,6 +18,7 @@
 //! assert!(!unsafe {
 //!     searcher.search_in(b"foo bar baz qux quux quuz corge grault garply waldo fred")
 //! });
+//! ```
 
 #![warn(missing_docs)]
 
@@ -35,7 +36,8 @@ use std::sync::Arc;
 /// Needle that can be searched for within a haystack. It allows specialized
 /// searcher implementations for needle sizes known at compile time.
 pub trait Needle {
-    /// Set to `Some(<usize>)` if and only if the needle's length is known at compile time.
+    /// Set to `Some(<usize>)` if and only if the needle's length is known at
+    /// compile time.
     const SIZE: Option<usize>;
     /// Return the slice corresponding to the needle.
     fn as_bytes(&self) -> &[u8];

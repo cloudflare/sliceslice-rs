@@ -16,6 +16,11 @@ trait NeedleWithSize: Needle {
             self.as_bytes().len()
         }
     }
+
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
 }
 
 impl<N: Needle + ?Sized> NeedleWithSize for N {}
@@ -145,36 +150,35 @@ impl<V: Vector> VectorHash<V> {
     }
 }
 
-/// Single-substring searcher using an AVX2 algorithm based on the
-/// "Generic SIMD" algorithm [presented by Wojciech
+/// Single-substring searcher using an AVX2 algorithm based on the "Generic
+/// SIMD" algorithm [presented by Wojciech
 /// Muła](http://0x80.pl/articles/simd-strfind.html).
 ///
-/// It is similar to the Rabin-Karp algorithm, except that the hash is
-/// not rolling and is calculated for several lanes at once. It begins
-/// by picking the first byte in the needle and checking at which
-/// positions in the haystack it occurs. Any position where it does not
-/// can be immediately discounted as a potential match.
+/// It is similar to the Rabin-Karp algorithm, except that the hash is not
+/// rolling and is calculated for several lanes at once. It begins by picking
+/// the first byte in the needle and checking at which positions in the haystack
+/// it occurs. Any position where it does not can be immediately discounted as a
+/// potential match.
 ///
 /// We then repeat this idea with a second byte in the needle (where the
-/// haystack is suitably offset) and take a bitwise AND to further limit
-/// the possible positions the needle can match in. Any remaining
-/// positions are fully evaluated using an equality comparison with the
-/// needle.
+/// haystack is suitably offset) and take a bitwise AND to further limit the
+/// possible positions the needle can match in. Any remaining positions are
+/// fully evaluated using an equality comparison with the needle.
 ///
-/// Originally, the algorithm always used the last byte for this second
-/// byte. Whilst this is often the most efficient option, it is
-/// vulnerable to a worst-case attack and so this implementation instead
-/// allows any byte (including a random one) to be chosen.
+/// Originally, the algorithm always used the last byte for this second byte.
+/// Whilst this is often the most efficient option, it is vulnerable to a
+/// worst-case attack and so this implementation instead allows any byte
+/// (including a random one) to be chosen.
 ///
-/// In the case where the needle is not a multiple of the number of SIMD
-/// lanes, the last chunk is made up of a partial overlap with the
-/// penultimate chunk to avoid reading random memory, differing from the
-/// original implementation. In this case, a mask is used to prevent
-/// performing an equality comparison on the same position twice.
+/// In the case where the needle is not a multiple of the number of SIMD lanes,
+/// the last chunk is made up of a partial overlap with the penultimate chunk to
+/// avoid reading random memory, differing from the original implementation. In
+/// this case, a mask is used to prevent performing an equality comparison on
+/// the same position twice.
 ///
-/// When the haystack is too short for an AVX2 register, a similar SSE2
-/// fallback is used instead. Finally, for very short haystacks there is
-/// a scalar Rabin-Karp implementation.
+/// When the haystack is too short for an AVX2 register, a similar SSE2 fallback
+/// is used instead. Finally, for very short haystacks there is a scalar
+/// Rabin-Karp implementation.
 pub struct Avx2Searcher<N: Needle> {
     position: usize,
     scalar_hash: ScalarHash,
@@ -184,21 +188,35 @@ pub struct Avx2Searcher<N: Needle> {
 }
 
 impl<N: Needle> Avx2Searcher<N> {
-    /// Creates a new searcher for `needle`. By default, `position` is
-    /// set to the last character in the needle.
+    /// Creates a new searcher for `needle`. By default, `position` is set to
+    /// the last character in the needle.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `needle` is empty or if the associated `SIZE` constant does
+    /// not correspond to the actual size of `needle`.
     #[target_feature(enable = "avx2")]
     pub unsafe fn new(needle: N) -> Self {
-        let position = needle.size() - 1;
+        // Wrapping prevents panicking on unsigned integer underflow when
+        // `needle` is empty.
+        let position = needle.size().wrapping_sub(1);
         Self::with_position(needle, position)
     }
 
-    /// Same as `new` but allows additionally specifying the `position`
-    /// to use.
+    /// Same as `new` but allows additionally specifying the `position` to use.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `needle` is empty, if `position` is not a valid index for
+    /// `needle` or if the associated `SIZE` constant does not correspond to the
+    /// actual size of `needle`.
     #[target_feature(enable = "avx2")]
     pub unsafe fn with_position(needle: N, position: usize) -> Self {
+        // Implicitly checks that the needle is not empty because position is an
+        // unsized integer.
+        assert!(position < needle.size());
+
         let bytes = needle.as_bytes();
-        assert!(!bytes.is_empty());
-        assert!(position < bytes.len());
         if let Some(size) = N::SIZE {
             assert_eq!(size, bytes.len());
         }
@@ -402,48 +420,72 @@ impl DynamicAvx2Searcher {
     /// the last character in the needle.
     #[target_feature(enable = "avx2")]
     pub unsafe fn new(needle: Box<[u8]>) -> Self {
-        let position = needle.len() - 1;
+        // Wrapping prevents panicking on unsigned integer underflow when
+        // `needle` is empty.
+        let position = needle.len().wrapping_sub(1);
         Self::with_position(needle, position)
     }
 
     /// Same as `new` but allows additionally specifying the `position` to use.
+    ///
+    /// # Panics
+    ///
+    /// When `needle` is not empty, panics if `position` is not a valid index
+    /// for `needle`.
     #[target_feature(enable = "avx2")]
     pub unsafe fn with_position(needle: Box<[u8]>, position: usize) -> Self {
-        assert!(!needle.is_empty());
-        assert!(position < needle.len());
-
         match *needle {
             [] => Self::N0,
-            [c0] => Self::N1(MemchrSearcher::new(c0)),
-            [c0, c1] => Self::N2(Avx2Searcher::new([c0, c1])),
-            [c0, c1, c2] => Self::N3(Avx2Searcher::new([c0, c1, c2])),
-            [c0, c1, c2, c3] => Self::N4(Avx2Searcher::new([c0, c1, c2, c3])),
-            [c0, c1, c2, c3, c4] => Self::N5(Avx2Searcher::new([c0, c1, c2, c3, c4])),
-            [c0, c1, c2, c3, c4, c5] => Self::N6(Avx2Searcher::new([c0, c1, c2, c3, c4, c5])),
-            [c0, c1, c2, c3, c4, c5, c6] => {
-                Self::N7(Avx2Searcher::new([c0, c1, c2, c3, c4, c5, c6]))
+            [c0] => {
+                // Check that `position` is set correctly for consistency.
+                assert_eq!(position, 0);
+                Self::N1(MemchrSearcher::new(c0))
             }
-            [c0, c1, c2, c3, c4, c5, c6, c7] => {
-                Self::N8(Avx2Searcher::new([c0, c1, c2, c3, c4, c5, c6, c7]))
+            [c0, c1] => Self::N2(Avx2Searcher::with_position([c0, c1], position)),
+            [c0, c1, c2] => Self::N3(Avx2Searcher::with_position([c0, c1, c2], position)),
+            [c0, c1, c2, c3] => Self::N4(Avx2Searcher::with_position([c0, c1, c2, c3], position)),
+            [c0, c1, c2, c3, c4] => {
+                Self::N5(Avx2Searcher::with_position([c0, c1, c2, c3, c4], position))
             }
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8] => {
-                Self::N9(Avx2Searcher::new([c0, c1, c2, c3, c4, c5, c6, c7, c8]))
+            [c0, c1, c2, c3, c4, c5] => Self::N6(Avx2Searcher::with_position(
+                [c0, c1, c2, c3, c4, c5],
+                position,
+            )),
+            [c0, c1, c2, c3, c4, c5, c6] => Self::N7(Avx2Searcher::with_position(
+                [c0, c1, c2, c3, c4, c5, c6],
+                position,
+            )),
+            [c0, c1, c2, c3, c4, c5, c6, c7] => Self::N8(Avx2Searcher::with_position(
+                [c0, c1, c2, c3, c4, c5, c6, c7],
+                position,
+            )),
+            [c0, c1, c2, c3, c4, c5, c6, c7, c8] => Self::N9(Avx2Searcher::with_position(
+                [c0, c1, c2, c3, c4, c5, c6, c7, c8],
+                position,
+            )),
+            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9] => Self::N10(Avx2Searcher::with_position(
+                [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9],
+                position,
+            )),
+            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10] => {
+                Self::N11(Avx2Searcher::with_position(
+                    [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10],
+                    position,
+                ))
             }
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9] => {
-                Self::N10(Avx2Searcher::new([c0, c1, c2, c3, c4, c5, c6, c7, c8, c9]))
+            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11] => {
+                Self::N12(Avx2Searcher::with_position(
+                    [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11],
+                    position,
+                ))
             }
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10] => Self::N11(Avx2Searcher::new([
-                c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10,
-            ])),
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11] => Self::N12(Avx2Searcher::new([
-                c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11,
-            ])),
             [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12] => {
-                Self::N13(Avx2Searcher::new([
-                    c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12,
-                ]))
+                Self::N13(Avx2Searcher::with_position(
+                    [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12],
+                    position,
+                ))
             }
-            _ => Self::N(Avx2Searcher::new(needle)),
+            _ => Self::N(Avx2Searcher::with_position(needle, position)),
         }
     }
 
