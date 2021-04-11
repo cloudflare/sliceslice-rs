@@ -521,129 +521,188 @@ impl DynamicAvx2Searcher {
 
 #[cfg(test)]
 mod tests {
-    use super::Avx2Searcher;
+    use super::{Avx2Searcher, DynamicAvx2Searcher};
+    use crate::Needle;
 
-    fn avx2_search(haystack: &[u8], needle: &[u8]) -> bool {
-        let search = |position| unsafe {
-            Avx2Searcher::with_position(needle.to_owned().into_boxed_slice(), position)
+    fn search(haystack: &[u8], needle: &[u8]) -> bool {
+        let search =
+            |position| unsafe { Avx2Searcher::with_position(needle, position).search_in(haystack) };
+
+        let dynamic_search = |position| unsafe {
+            DynamicAvx2Searcher::with_position(needle.to_owned().into_boxed_slice(), position)
                 .search_in(haystack)
         };
 
         let result = search(0);
         for position in 1..needle.len() {
             assert_eq!(search(position), result);
+            assert_eq!(dynamic_search(position), result);
         }
 
         result
     }
 
     #[test]
-    fn avx2_search_same() {
-        assert!(avx2_search(b"foo", b"foo"));
+    fn search_same() {
+        assert!(search(b"x", b"x"));
 
-        assert!(avx2_search(
+        assert!(search(b"xy", b"xy"));
+
+        assert!(search(b"foo", b"foo"));
+
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit"
         ));
 
-        assert!(avx2_search(
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus"
         ));
     }
 
     #[test]
-    fn avx2_search_different() {
-        assert!(!avx2_search(b"bar", b"foo"));
+    fn search_different() {
+        assert!(!search(b"x", b"y"));
 
-        assert!(!avx2_search(
+        assert!(!search(b"xy", b"xz"));
+
+        assert!(!search(b"bar", b"foo"));
+
+        assert!(!search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"foo"
         ));
 
-        assert!(!avx2_search(
+        assert!(!search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"foo"
         ));
 
-        assert!(!avx2_search(
+        assert!(!search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"foo bar baz qux quux quuz corge grault garply waldo fred plugh xyzzy thud"
         ));
     }
 
     #[test]
-    fn avx2_search_prefix() {
-        assert!(avx2_search(b"foobar", b"foo"));
+    fn search_prefix() {
+        assert!(search(b"xy", b"x"));
 
-        assert!(avx2_search(
+        assert!(search(b"foobar", b"foo"));
+
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"Lorem"
         ));
 
-        assert!(avx2_search(
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Lorem"
         ));
 
-        assert!(avx2_search(
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit"
         ));
     }
 
     #[test]
-    fn avx2_search_suffix() {
-        assert!(avx2_search(b"foobar", b"bar"));
+    fn search_suffix() {
+        assert!(search(b"xy", b"y"));
 
-        assert!(avx2_search(
+        assert!(search(b"foobar", b"bar"));
+
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"elit"
         ));
 
-        assert!(avx2_search(
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"purus"
         ));
 
-        assert!(avx2_search(
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Aliquam iaculis fringilla mi, nec aliquet purus"
         ));
     }
 
     #[test]
-    fn avx2_search_mutiple() {
-        assert!(avx2_search(b"foobarfoo", b"foo"));
+    fn search_multiple() {
+        assert!(search(b"xx", b"x"));
 
-        assert!(avx2_search(
+        assert!(search(b"xyxy", b"xy"));
+
+        assert!(search(b"foobarfoo", b"foo"));
+
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"it"
         ));
 
-        assert!(avx2_search(
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"conse"
         ));
     }
 
     #[test]
-    fn avx2_search_middle() {
-        assert!(avx2_search(b"foobarfoo", b"bar"));
+    fn search_middle() {
+        assert!(search(b"xyz", b"y"));
 
-        assert!(avx2_search(
+        assert!(search(b"wxyz", b"xy"));
+
+        assert!(search(b"foobarfoo", b"bar"));
+
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"consectetur"
         ));
 
-        assert!(avx2_search(
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"orci"
         ));
 
-        assert!(avx2_search(
+        assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Maecenas commodo posuere orci a consectetur"
         ));
+    }
+
+    #[test]
+    #[should_panic]
+    fn avx2_invalid_position() {
+        unsafe { Avx2Searcher::with_position(b"foo".to_vec().into_boxed_slice(), 3) };
+    }
+
+    #[test]
+    #[should_panic]
+    fn dynamic_avx2_invalid_position() {
+        unsafe { DynamicAvx2Searcher::with_position(b"foo".to_vec().into_boxed_slice(), 3) };
+    }
+
+    #[test]
+    #[should_panic]
+    fn avx2_empty_needle() {
+        unsafe { Avx2Searcher::new(Box::new([])) };
+    }
+
+    #[test]
+    #[should_panic]
+    fn avx2_invalid_size() {
+        struct Foo(&'static [u8]);
+
+        impl Needle for Foo {
+            const SIZE: Option<usize> = Some(2);
+
+            fn as_bytes(&self) -> &[u8] {
+                &self.0
+            }
+        }
+
+        unsafe { Avx2Searcher::new(Foo(b"foo")) };
     }
 }
