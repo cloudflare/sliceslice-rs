@@ -57,6 +57,15 @@ fn search<M: Measurement>(c: &mut Criterion<M>) {
                 },
             );
 
+            group.bench_with_input(
+                BenchmarkId::new("memchr::memmem::Finder::find", parameter),
+                &size,
+                |b, _| {
+                    let finder = memchr::memmem::Finder::new(needle);
+                    b.iter(|| black_box(finder.find(haystack)));
+                },
+            );
+
             #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
             {
                 use sliceslice::x86::DynamicAvx2Searcher;
