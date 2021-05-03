@@ -705,4 +705,23 @@ mod tests {
 
         unsafe { Avx2Searcher::new(Foo(b"foo")) };
     }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn size_of_avx2_searcher() {
+        use std::mem::size_of;
+
+        assert_eq!(size_of::<Avx2Searcher::<&[u8]>>(), 128);
+        assert_eq!(size_of::<Avx2Searcher::<[u8; 0]>>(), 128);
+        assert_eq!(size_of::<Avx2Searcher::<[u8; 16]>>(), 128);
+        assert_eq!(size_of::<Avx2Searcher::<Box<[u8]>>>(), 128);
+    }
+
+    #[test]
+    #[cfg(target_pointer_width = "64")]
+    fn size_of_dynamic_avx2_searcher() {
+        use std::mem::size_of;
+
+        assert_eq!(size_of::<DynamicAvx2Searcher>(), 160);
+    }
 }
