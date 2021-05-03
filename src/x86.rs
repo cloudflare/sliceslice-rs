@@ -382,7 +382,7 @@ impl<N: Needle> Avx2Searcher<N> {
 /// up to a length of thirteen it uses specialized versions of `Avx2Searcher`,
 /// finally falling back to the generic version of `Avx2Searcher` for longer
 /// needles.
-pub enum DynamicAvx2Searcher {
+pub enum DynamicAvx2Searcher<N: Needle> {
     /// Specialization for needles with length 0.
     N0,
     /// Specialization for needles with length 1.
@@ -412,17 +412,17 @@ pub enum DynamicAvx2Searcher {
     /// Specialization for needles with length 13.
     N13(Avx2Searcher<[u8; 13]>),
     /// Fallback implementation for needles of any size.
-    N(Avx2Searcher<Box<[u8]>>),
+    N(Avx2Searcher<N>),
 }
 
-impl DynamicAvx2Searcher {
+impl<N: Needle> DynamicAvx2Searcher<N> {
     /// Creates a new searcher for `needle`. By default, `position` is set to
     /// the last character in the needle.
     #[target_feature(enable = "avx2")]
-    pub unsafe fn new(needle: Box<[u8]>) -> Self {
+    pub unsafe fn new(needle: N) -> Self {
         // Wrapping prevents panicking on unsigned integer underflow when
         // `needle` is empty.
-        let position = needle.len().wrapping_sub(1);
+        let position = needle.as_bytes().len().wrapping_sub(1);
         Self::with_position(needle, position)
     }
 
@@ -433,8 +433,8 @@ impl DynamicAvx2Searcher {
     /// When `needle` is not empty, panics if `position` is not a valid index
     /// for `needle`.
     #[target_feature(enable = "avx2")]
-    pub unsafe fn with_position(needle: Box<[u8]>, position: usize) -> Self {
-        match *needle {
+    pub unsafe fn with_position(needle: N, position: usize) -> Self {
+        match *needle.as_bytes() {
             [] => Self::N0,
             [c0] => {
                 // Check that `position` is set correctly for consistency.
@@ -722,6 +722,9 @@ mod tests {
     fn size_of_dynamic_avx2_searcher() {
         use std::mem::size_of;
 
-        assert_eq!(size_of::<DynamicAvx2Searcher>(), 160);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<&[u8]>>(), 160);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 0]>>(), 160);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 16]>>(), 160);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<Box<[u8]>>>(), 160);
     }
 }

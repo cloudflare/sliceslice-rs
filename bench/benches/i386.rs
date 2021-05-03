@@ -101,9 +101,7 @@ fn search_short_haystack<M: Measurement>(c: &mut Criterion<M>) {
         group.bench_function("DynamicAvx2Searcher::search_in", |b| {
             let searchers = needles
                 .iter()
-                .map(|&needle| unsafe {
-                    DynamicAvx2Searcher::new(needle.as_bytes().to_owned().into_boxed_slice())
-                })
+                .map(|&needle| unsafe { DynamicAvx2Searcher::new(needle.as_bytes()) })
                 .collect::<Vec<_>>();
 
             b.iter(|| {
@@ -198,9 +196,7 @@ fn search_haystack<M: Measurement>(
         group.bench_function("DynamicAvx2Searcher::search_in", |b| {
             let searchers = needles
                 .iter()
-                .map(|needle| unsafe {
-                    DynamicAvx2Searcher::new(needle.as_bytes().to_owned().into_boxed_slice())
-                })
+                .map(|needle| unsafe { DynamicAvx2Searcher::new(needle.as_bytes()) })
                 .collect::<Vec<_>>();
 
             b.iter(|| {
