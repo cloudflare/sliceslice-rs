@@ -94,17 +94,20 @@ fn search_short_haystack<M: Measurement>(c: &mut Criterion<M>) {
     group.finish();
 }
 
-fn search_long_haystack<M: Measurement>(c: &mut Criterion<M>) {
-    let haystack = include_str!("../../data/haystack");
-
+fn search_haystack<M: Measurement>(
+    c: &mut Criterion<M>,
+    name: &'static str,
+    haystack: &'static [u8],
+) {
     let needles = BufReader::new(File::open("../data/words.txt").unwrap())
         .lines()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
 
-    let mut group = c.benchmark_group("long_haystack");
+    let mut group = c.benchmark_group(name);
 
     group.bench_function("String::find", |b| {
+        let haystack = String::from_utf8_lossy(haystack).into_owned();
         b.iter(|| {
             for needle in &needles {
                 black_box(haystack.find(needle));
@@ -120,7 +123,7 @@ fn search_long_haystack<M: Measurement>(c: &mut Criterion<M>) {
 
         b.iter(|| {
             for searcher in &searchers {
-                black_box(searcher.search_in(haystack.as_bytes()));
+                black_box(searcher.search_in(haystack));
             }
         });
     });
@@ -128,7 +131,7 @@ fn search_long_haystack<M: Measurement>(c: &mut Criterion<M>) {
     group.bench_function("twoway::find_bytes", |b| {
         b.iter(|| {
             for needle in &needles {
-                black_box(twoway::find_bytes(haystack.as_bytes(), needle.as_bytes()));
+                black_box(twoway::find_bytes(haystack, needle.as_bytes()));
             }
         });
     });
@@ -141,9 +144,7 @@ fn search_long_haystack<M: Measurement>(c: &mut Criterion<M>) {
         group.bench_function("sse4_strstr::avx2_strstr_v2", |b| {
             b.iter(|| {
                 for needle in &needles {
-                    black_box(unsafe {
-                        sse4_strstr::avx2_strstr_v2(haystack.as_bytes(), needle.as_bytes())
-                    });
+                    black_box(unsafe { sse4_strstr::avx2_strstr_v2(haystack, needle.as_bytes()) });
                 }
             });
         });
@@ -158,7 +159,7 @@ fn search_long_haystack<M: Measurement>(c: &mut Criterion<M>) {
 
             b.iter(|| {
                 for searcher in &searchers {
-                    black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
+                    black_box(unsafe { searcher.search_in(haystack) });
                 }
             });
         });
@@ -167,17 +168,27 @@ fn search_long_haystack<M: Measurement>(c: &mut Criterion<M>) {
     group.finish();
 }
 
+fn search_long_haystack<M: Measurement>(c: &mut Criterion<M>) {
+    let haystack = include_bytes!("../../data/i386.txt");
+    search_haystack(c, "long_haystack", haystack)
+}
+
+fn search_random_haystack<M: Measurement>(c: &mut Criterion<M>) {
+    let haystack = include_bytes!("../../data/haystack");
+    search_haystack(c, "random_haystack", haystack)
+}
+
 criterion_group!(
     name = i386_wall_time;
     config = Criterion::default().with_measurement(WallTime);
-    targets = search_short_haystack, search_long_haystack
+    targets = search_short_haystack, search_long_haystack, search_random_haystack
 );
 
 #[cfg(target_os = "linux")]
 criterion_group!(
     name = i386_perf_instructions;
     config = Criterion::default().with_measurement(PerfMeasurement::new(PerfMode::Instructions));
-    targets = search_short_haystack, search_long_haystack
+    targets = search_short_haystack, search_long_haystack, search_random_haystack
 );
 
 #[cfg(target_os = "linux")]
