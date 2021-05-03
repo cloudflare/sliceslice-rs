@@ -296,6 +296,9 @@ impl<N: Needle> Avx2Searcher<N> {
                 Some(11) => memcmp::specialized::<10>(chunk, needle),
                 Some(12) => memcmp::specialized::<11>(chunk, needle),
                 Some(13) => memcmp::specialized::<12>(chunk, needle),
+                Some(14) => memcmp::specialized::<13>(chunk, needle),
+                Some(15) => memcmp::specialized::<14>(chunk, needle),
+                Some(16) => memcmp::specialized::<15>(chunk, needle),
                 _ => memcmp::generic(chunk, needle, self.needle.size() - 1),
             };
             if equal {
@@ -412,6 +415,12 @@ pub enum DynamicAvx2Searcher<N: Needle> {
     N12(Avx2Searcher<[u8; 12]>),
     /// Specialization for needles with length 13.
     N13(Avx2Searcher<[u8; 13]>),
+    /// Specialization for needles with length 14.
+    N14(Avx2Searcher<[u8; 14]>),
+    /// Specialization for needles with length 15.
+    N15(Avx2Searcher<[u8; 15]>),
+    /// Specialization for needles with length 16.
+    N16(Avx2Searcher<[u8; 16]>),
     /// Fallback implementation for needles of any size.
     N(Avx2Searcher<N>),
 }
@@ -460,6 +469,9 @@ impl<N: Needle> DynamicAvx2Searcher<N> {
             array!(c, 11) => Self::N11(Avx2Searcher::with_position(array!(c, 11), position)),
             array!(c, 12) => Self::N12(Avx2Searcher::with_position(array!(c, 12), position)),
             array!(c, 13) => Self::N13(Avx2Searcher::with_position(array!(c, 13), position)),
+            array!(c, 14) => Self::N14(Avx2Searcher::with_position(array!(c, 14), position)),
+            array!(c, 15) => Self::N15(Avx2Searcher::with_position(array!(c, 15), position)),
+            array!(c, 16) => Self::N16(Avx2Searcher::with_position(array!(c, 16), position)),
             _ => Self::N(Avx2Searcher::with_position(needle, position)),
         }
     }
@@ -483,6 +495,9 @@ impl<N: Needle> DynamicAvx2Searcher<N> {
             Self::N11(searcher) => searcher.inlined_search_in(haystack),
             Self::N12(searcher) => searcher.inlined_search_in(haystack),
             Self::N13(searcher) => searcher.inlined_search_in(haystack),
+            Self::N14(searcher) => searcher.inlined_search_in(haystack),
+            Self::N15(searcher) => searcher.inlined_search_in(haystack),
+            Self::N16(searcher) => searcher.inlined_search_in(haystack),
             Self::N(searcher) => searcher.inlined_search_in(haystack),
         }
     }
