@@ -9,7 +9,7 @@
 //! ```
 //! use sliceslice::x86::DynamicAvx2Searcher;
 //!
-//! let searcher = unsafe { DynamicAvx2Searcher::new(b"ipsum".to_owned().into()) };
+//! let searcher = unsafe { DynamicAvx2Searcher::new(b"ipsum") };
 //!
 //! assert!(unsafe {
 //!     searcher.search_in(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit")
