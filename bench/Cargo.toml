@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 criterion = "0.3"
+memchr = "2.4"
 memmem = "0.1"
 sliceslice = { path = ".." }
 sse4-strstr = { path = "sse4-strstr", optional = true }
