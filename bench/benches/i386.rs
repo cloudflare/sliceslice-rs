@@ -66,6 +66,21 @@ fn search_short_haystack<M: Measurement>(c: &mut Criterion<M>) {
         });
     });
 
+    group.bench_function("memchr::memmem::Finder::find", |b| {
+        let finders = needles
+            .iter()
+            .map(|&needle| memchr::memmem::Finder::new(needle.as_bytes()))
+            .collect::<Vec<_>>();
+
+        b.iter(|| {
+            for (i, finder) in finders.iter().enumerate() {
+                for haystack in &needles[i..] {
+                    black_box(finder.find(haystack.as_bytes()));
+                }
+            }
+        });
+    });
+
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
         use sliceslice::x86::DynamicAvx2Searcher;
@@ -150,6 +165,19 @@ fn search_haystack<M: Measurement>(
         b.iter(|| {
             for needle in &needles {
                 black_box(memchr::memmem::find(haystack, needle.as_bytes()));
+            }
+        });
+    });
+
+    group.bench_function("memchr::memmem::Finder::find", |b| {
+        let finders = needles
+            .iter()
+            .map(|needle| memchr::memmem::Finder::new(needle.as_bytes()))
+            .collect::<Vec<_>>();
+
+        b.iter(|| {
+            for finder in &finders {
+                black_box(finder.find(haystack));
             }
         });
     });
