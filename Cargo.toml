@@ -11,6 +11,7 @@ keywords = ["search", "text", "string", "single", "simd"]
 
 [dependencies]
 memchr = "2.3"
+seq-macro = "0.2"
 
 [profile.release]
 debug = true
