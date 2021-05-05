@@ -1,6 +1,7 @@
 #![allow(clippy::missing_safety_doc)]
 
 use crate::{bits, memcmp, MemchrSearcher, Needle};
+use seq_macro::seq;
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -415,6 +416,12 @@ pub enum DynamicAvx2Searcher<N: Needle> {
     N(Avx2Searcher<N>),
 }
 
+macro_rules! array {
+    ($c:ident, $S:literal) => [seq!(N in 0..$S {
+            [ #( $c#N, )* ]
+    })];
+}
+
 impl<N: Needle> DynamicAvx2Searcher<N> {
     /// Creates a new searcher for `needle`. By default, `position` is set to
     /// the last character in the needle.
@@ -441,50 +448,18 @@ impl<N: Needle> DynamicAvx2Searcher<N> {
                 assert_eq!(position, 0);
                 Self::N1(MemchrSearcher::new(c0))
             }
-            [c0, c1] => Self::N2(Avx2Searcher::with_position([c0, c1], position)),
-            [c0, c1, c2] => Self::N3(Avx2Searcher::with_position([c0, c1, c2], position)),
-            [c0, c1, c2, c3] => Self::N4(Avx2Searcher::with_position([c0, c1, c2, c3], position)),
-            [c0, c1, c2, c3, c4] => {
-                Self::N5(Avx2Searcher::with_position([c0, c1, c2, c3, c4], position))
-            }
-            [c0, c1, c2, c3, c4, c5] => Self::N6(Avx2Searcher::with_position(
-                [c0, c1, c2, c3, c4, c5],
-                position,
-            )),
-            [c0, c1, c2, c3, c4, c5, c6] => Self::N7(Avx2Searcher::with_position(
-                [c0, c1, c2, c3, c4, c5, c6],
-                position,
-            )),
-            [c0, c1, c2, c3, c4, c5, c6, c7] => Self::N8(Avx2Searcher::with_position(
-                [c0, c1, c2, c3, c4, c5, c6, c7],
-                position,
-            )),
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8] => Self::N9(Avx2Searcher::with_position(
-                [c0, c1, c2, c3, c4, c5, c6, c7, c8],
-                position,
-            )),
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9] => Self::N10(Avx2Searcher::with_position(
-                [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9],
-                position,
-            )),
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10] => {
-                Self::N11(Avx2Searcher::with_position(
-                    [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10],
-                    position,
-                ))
-            }
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11] => {
-                Self::N12(Avx2Searcher::with_position(
-                    [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11],
-                    position,
-                ))
-            }
-            [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12] => {
-                Self::N13(Avx2Searcher::with_position(
-                    [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12],
-                    position,
-                ))
-            }
+            array!(c, 2) => Self::N2(Avx2Searcher::with_position(array!(c, 2), position)),
+            array!(c, 3) => Self::N3(Avx2Searcher::with_position(array!(c, 3), position)),
+            array!(c, 4) => Self::N4(Avx2Searcher::with_position(array!(c, 4), position)),
+            array!(c, 5) => Self::N5(Avx2Searcher::with_position(array!(c, 5), position)),
+            array!(c, 6) => Self::N6(Avx2Searcher::with_position(array!(c, 6), position)),
+            array!(c, 7) => Self::N7(Avx2Searcher::with_position(array!(c, 7), position)),
+            array!(c, 8) => Self::N8(Avx2Searcher::with_position(array!(c, 8), position)),
+            array!(c, 9) => Self::N9(Avx2Searcher::with_position(array!(c, 9), position)),
+            array!(c, 10) => Self::N10(Avx2Searcher::with_position(array!(c, 10), position)),
+            array!(c, 11) => Self::N11(Avx2Searcher::with_position(array!(c, 11), position)),
+            array!(c, 12) => Self::N12(Avx2Searcher::with_position(array!(c, 12), position)),
+            array!(c, 13) => Self::N13(Avx2Searcher::with_position(array!(c, 13), position)),
             _ => Self::N(Avx2Searcher::with_position(needle, position)),
         }
     }
