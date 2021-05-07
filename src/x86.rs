@@ -227,11 +227,11 @@ impl<N: Needle> Avx2Searcher<N> {
         let avx2_hash = VectorHash::new(bytes[0], bytes[position]);
 
         Self {
-            needle,
             position,
             scalar_hash,
             sse2_hash,
             avx2_hash,
+            needle,
         }
     }
 
