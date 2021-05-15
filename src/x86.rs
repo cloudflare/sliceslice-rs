@@ -6,7 +6,6 @@ use seq_macro::seq;
 use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
-use std::mem;
 
 trait NeedleWithSize: Needle {
     #[inline]
@@ -57,6 +56,8 @@ impl ScalarHash {
 /// more generically) in order to share functionality between SSE2, AVX2 and
 /// possibly future implementations.
 trait Vector: Copy {
+    const LANES: usize;
+
     unsafe fn set1_epi8(a: i8) -> Self;
 
     unsafe fn loadu_si(a: *const Self) -> Self;
@@ -68,7 +69,48 @@ trait Vector: Copy {
     unsafe fn movemask_epi8(a: Self) -> i32;
 }
 
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+#[allow(non_camel_case_types)]
+struct __m64i(__m128i);
+
+impl Vector for __m64i {
+    const LANES: usize = 8;
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn set1_epi8(a: i8) -> Self {
+        __m64i(_mm_set1_epi8(a))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn loadu_si(a: *const Self) -> Self {
+        __m64i(_mm_loadu_si128(a as *const std::arch::x86_64::__m128i))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+        __m64i(_mm_cmpeq_epi8(a.0, b.0))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn and_si(a: Self, b: Self) -> Self {
+        __m64i(_mm_and_si128(a.0, b.0))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn movemask_epi8(a: Self) -> i32 {
+        _mm_movemask_epi8(a.0) & 0xFF
+    }
+}
+
 impl Vector for __m128i {
+    const LANES: usize = 16;
+
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn set1_epi8(a: i8) -> Self {
@@ -101,6 +143,8 @@ impl Vector for __m128i {
 }
 
 impl Vector for __m256i {
+    const LANES: usize = 32;
+
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn set1_epi8(a: i8) -> Self {
@@ -183,6 +227,7 @@ impl<V: Vector> VectorHash<V> {
 pub struct Avx2Searcher<N: Needle> {
     position: usize,
     scalar_hash: ScalarHash,
+    u64_hash: VectorHash<__m64i>,
     sse2_hash: VectorHash<__m128i>,
     avx2_hash: VectorHash<__m256i>,
     needle: N,
@@ -223,12 +268,14 @@ impl<N: Needle> Avx2Searcher<N> {
         }
 
         let scalar_hash = ScalarHash::from(bytes);
+        let u64_hash = VectorHash::new(bytes[0], bytes[position]);
         let sse2_hash = VectorHash::new(bytes[0], bytes[position]);
         let avx2_hash = VectorHash::new(bytes[0], bytes[position]);
 
         Self {
             position,
             scalar_hash,
+            u64_hash,
             sse2_hash,
             avx2_hash,
             needle,
@@ -321,14 +368,13 @@ impl<N: Needle> Avx2Searcher<N> {
     ) -> bool {
         debug_assert!(haystack.len() >= self.needle.size());
 
-        let lanes = mem::size_of::<V>();
         let end = haystack.len() - self.needle.size() + 1;
 
-        if end < lanes {
+        if end < V::LANES {
             return next(self, haystack);
         }
 
-        let mut chunks = haystack[..end].chunks_exact(lanes);
+        let mut chunks = haystack[..end].chunks_exact(V::LANES);
         while let Some(chunk) = chunks.next() {
             if self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1) {
                 return true;
@@ -337,8 +383,8 @@ impl<N: Needle> Avx2Searcher<N> {
 
         let remainder = chunks.remainder().len();
         if remainder > 0 {
-            let start = haystack.as_ptr().add(end - lanes);
-            let mask = -1 << (lanes - remainder);
+            let start = haystack.as_ptr().add(end - V::LANES);
+            let mask = -1 << (V::LANES - remainder);
 
             if self.vector_search_in_chunk(haystack, hash, start, mask) {
                 return true;
@@ -350,8 +396,14 @@ impl<N: Needle> Avx2Searcher<N> {
 
     #[inline]
     #[target_feature(enable = "avx2")]
+    unsafe fn u64_search_in(&self, haystack: &[u8]) -> bool {
+        self.vector_search_in(haystack, &self.u64_hash, Self::scalar_search_in)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
     unsafe fn sse2_search_in(&self, haystack: &[u8]) -> bool {
-        self.vector_search_in(haystack, &self.sse2_hash, Self::scalar_search_in)
+        self.vector_search_in(haystack, &self.sse2_hash, Self::u64_search_in)
     }
 
     #[inline]
@@ -701,10 +753,10 @@ mod tests {
     fn size_of_avx2_searcher() {
         use std::mem::size_of;
 
-        assert_eq!(size_of::<Avx2Searcher::<&[u8]>>(), 128);
-        assert_eq!(size_of::<Avx2Searcher::<[u8; 0]>>(), 128);
-        assert_eq!(size_of::<Avx2Searcher::<[u8; 16]>>(), 128);
-        assert_eq!(size_of::<Avx2Searcher::<Box<[u8]>>>(), 128);
+        assert_eq!(size_of::<Avx2Searcher::<&[u8]>>(), 160);
+        assert_eq!(size_of::<Avx2Searcher::<[u8; 0]>>(), 160);
+        assert_eq!(size_of::<Avx2Searcher::<[u8; 16]>>(), 160);
+        assert_eq!(size_of::<Avx2Searcher::<Box<[u8]>>>(), 160);
     }
 
     #[test]
@@ -712,9 +764,9 @@ mod tests {
     fn size_of_dynamic_avx2_searcher() {
         use std::mem::size_of;
 
-        assert_eq!(size_of::<DynamicAvx2Searcher::<&[u8]>>(), 160);
-        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 0]>>(), 160);
-        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 16]>>(), 160);
-        assert_eq!(size_of::<DynamicAvx2Searcher::<Box<[u8]>>>(), 160);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<&[u8]>>(), 192);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 0]>>(), 192);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 16]>>(), 192);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<Box<[u8]>>>(), 192);
     }
 }
