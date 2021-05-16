@@ -195,6 +195,16 @@ impl<V: Vector> VectorHash<V> {
     }
 }
 
+impl From<&VectorHash<__m128i>> for VectorHash<__m64i> {
+    #[inline]
+    fn from(hash: &VectorHash<__m128i>) -> Self {
+        Self {
+            first: __m64i(hash.first),
+            last: __m64i(hash.last),
+        }
+    }
+}
+
 /// Single-substring searcher using an AVX2 algorithm based on the "Generic
 /// SIMD" algorithm [presented by Wojciech
 /// Muła](http://0x80.pl/articles/simd-strfind.html).
@@ -227,7 +237,6 @@ impl<V: Vector> VectorHash<V> {
 pub struct Avx2Searcher<N: Needle> {
     position: usize,
     scalar_hash: ScalarHash,
-    u64_hash: VectorHash<__m64i>,
     sse2_hash: VectorHash<__m128i>,
     avx2_hash: VectorHash<__m256i>,
     needle: N,
@@ -268,14 +277,12 @@ impl<N: Needle> Avx2Searcher<N> {
         }
 
         let scalar_hash = ScalarHash::from(bytes);
-        let u64_hash = VectorHash::new(bytes[0], bytes[position]);
         let sse2_hash = VectorHash::new(bytes[0], bytes[position]);
         let avx2_hash = VectorHash::new(bytes[0], bytes[position]);
 
         Self {
             position,
             scalar_hash,
-            u64_hash,
             sse2_hash,
             avx2_hash,
             needle,
@@ -397,7 +404,8 @@ impl<N: Needle> Avx2Searcher<N> {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn u64_search_in(&self, haystack: &[u8]) -> bool {
-        self.vector_search_in(haystack, &self.u64_hash, Self::scalar_search_in)
+        let hash = VectorHash::<__m64i>::from(&self.sse2_hash);
+        self.vector_search_in(haystack, &hash, Self::scalar_search_in)
     }
 
     #[inline]
@@ -753,10 +761,10 @@ mod tests {
     fn size_of_avx2_searcher() {
         use std::mem::size_of;
 
-        assert_eq!(size_of::<Avx2Searcher::<&[u8]>>(), 160);
-        assert_eq!(size_of::<Avx2Searcher::<[u8; 0]>>(), 160);
-        assert_eq!(size_of::<Avx2Searcher::<[u8; 16]>>(), 160);
-        assert_eq!(size_of::<Avx2Searcher::<Box<[u8]>>>(), 160);
+        assert_eq!(size_of::<Avx2Searcher::<&[u8]>>(), 128);
+        assert_eq!(size_of::<Avx2Searcher::<[u8; 0]>>(), 128);
+        assert_eq!(size_of::<Avx2Searcher::<[u8; 16]>>(), 128);
+        assert_eq!(size_of::<Avx2Searcher::<Box<[u8]>>>(), 128);
     }
 
     #[test]
@@ -764,9 +772,9 @@ mod tests {
     fn size_of_dynamic_avx2_searcher() {
         use std::mem::size_of;
 
-        assert_eq!(size_of::<DynamicAvx2Searcher::<&[u8]>>(), 192);
-        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 0]>>(), 192);
-        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 16]>>(), 192);
-        assert_eq!(size_of::<DynamicAvx2Searcher::<Box<[u8]>>>(), 192);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<&[u8]>>(), 160);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 0]>>(), 160);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 16]>>(), 160);
+        assert_eq!(size_of::<DynamicAvx2Searcher::<Box<[u8]>>>(), 160);
     }
 }
