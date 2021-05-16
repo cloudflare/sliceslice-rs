@@ -86,7 +86,7 @@ impl Vector for __m64i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn loadu_si(a: *const Self) -> Self {
-        __m64i(_mm_loadu_si128(a as *const std::arch::x86_64::__m128i))
+        __m64i(_mm_set_epi64x(0, std::ptr::read_unaligned(a as *const i64)))
     }
 
     #[inline]
