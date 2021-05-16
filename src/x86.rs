@@ -416,8 +416,8 @@ impl<N: Needle> Avx2Searcher<N> {
     #[inline]
     #[target_feature(enable = "avx2")]
     pub unsafe fn inlined_search_in(&self, haystack: &[u8]) -> bool {
-        if haystack.len() < self.needle.size() {
-            return false;
+        if haystack.len() <= self.needle.size() {
+            return haystack == self.needle.as_bytes();
         }
 
         self.avx2_search_in(haystack)
