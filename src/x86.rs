@@ -72,6 +72,45 @@ trait Vector: Copy {
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 #[allow(non_camel_case_types)]
+struct __m32i(__m128i);
+
+impl Vector for __m32i {
+    const LANES: usize = 4;
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn set1_epi8(a: i8) -> Self {
+        __m32i(_mm_set1_epi8(a))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn loadu_si(a: *const Self) -> Self {
+        __m32i(_mm_set1_epi32(std::ptr::read_unaligned(a as *const i32)))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+        __m32i(_mm_cmpeq_epi8(a.0, b.0))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn and_si(a: Self, b: Self) -> Self {
+        __m32i(_mm_and_si128(a.0, b.0))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn movemask_epi8(a: Self) -> i32 {
+        _mm_movemask_epi8(a.0) & 0xF
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+#[allow(non_camel_case_types)]
 struct __m64i(__m128i);
 
 impl Vector for __m64i {
@@ -201,6 +240,16 @@ impl From<&VectorHash<__m128i>> for VectorHash<__m64i> {
         Self {
             first: __m64i(hash.first),
             last: __m64i(hash.last),
+        }
+    }
+}
+
+impl From<&VectorHash<__m128i>> for VectorHash<__m32i> {
+    #[inline]
+    fn from(hash: &VectorHash<__m128i>) -> Self {
+        Self {
+            first: __m32i(hash.first),
+            last: __m32i(hash.last),
         }
     }
 }
@@ -403,21 +452,28 @@ impl<N: Needle> Avx2Searcher<N> {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn u64_search_in(&self, haystack: &[u8]) -> bool {
-        let hash = VectorHash::<__m64i>::from(&self.sse2_hash);
+    unsafe fn sse2_4_search_in(&self, haystack: &[u8]) -> bool {
+        let hash = VectorHash::<__m32i>::from(&self.sse2_hash);
         self.vector_search_in(haystack, &hash, Self::scalar_search_in)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn sse2_search_in(&self, haystack: &[u8]) -> bool {
-        self.vector_search_in(haystack, &self.sse2_hash, Self::u64_search_in)
+    unsafe fn sse2_8_search_in(&self, haystack: &[u8]) -> bool {
+        let hash = VectorHash::<__m64i>::from(&self.sse2_hash);
+        self.vector_search_in(haystack, &hash, Self::sse2_4_search_in)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn sse2_16_search_in(&self, haystack: &[u8]) -> bool {
+        self.vector_search_in(haystack, &self.sse2_hash, Self::sse2_8_search_in)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn avx2_search_in(&self, haystack: &[u8]) -> bool {
-        self.vector_search_in(haystack, &self.avx2_hash, Self::sse2_search_in)
+        self.vector_search_in(haystack, &self.avx2_hash, Self::sse2_16_search_in)
     }
 
     /// Inlined version of `search_in` for hot call sites.
