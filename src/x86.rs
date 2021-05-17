@@ -25,33 +25,6 @@ trait NeedleWithSize: Needle {
 
 impl<N: Needle + ?Sized> NeedleWithSize for N {}
 
-/// Rolling hash for the simple Rabin-Karp implementation. As a hashing
-/// function, the sum of all the bytes is computed.
-#[derive(Clone, Copy, Default, PartialEq)]
-struct ScalarHash(usize);
-
-impl From<&[u8]> for ScalarHash {
-    #[inline]
-    fn from(bytes: &[u8]) -> Self {
-        bytes.iter().fold(Default::default(), |mut hash, &b| {
-            hash.push(b);
-            hash
-        })
-    }
-}
-
-impl ScalarHash {
-    #[inline]
-    fn push(&mut self, b: u8) {
-        self.0 = self.0.wrapping_add(b.into());
-    }
-
-    #[inline]
-    fn pop(&mut self, b: u8) {
-        self.0 = self.0.wrapping_sub(b.into());
-    }
-}
-
 /// Represents an SIMD register type that is x86-specific (but could be used
 /// more generically) in order to share functionality between SSE2, AVX2 and
 /// possibly future implementations.
@@ -67,6 +40,45 @@ trait Vector: Copy {
     unsafe fn and_si(a: Self, b: Self) -> Self;
 
     unsafe fn movemask_epi8(a: Self) -> i32;
+}
+
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+#[allow(non_camel_case_types)]
+struct __m16i(__m128i);
+
+impl Vector for __m16i {
+    const LANES: usize = 2;
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn set1_epi8(a: i8) -> Self {
+        __m16i(_mm_set1_epi8(a))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn loadu_si(a: *const Self) -> Self {
+        __m16i(_mm_set1_epi16(std::ptr::read_unaligned(a as *const i16)))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+        __m16i(_mm_cmpeq_epi8(a.0, b.0))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn and_si(a: Self, b: Self) -> Self {
+        __m16i(_mm_and_si128(a.0, b.0))
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn movemask_epi8(a: Self) -> i32 {
+        _mm_movemask_epi8(a.0) & 0x3
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -254,6 +266,16 @@ impl From<&VectorHash<__m128i>> for VectorHash<__m32i> {
     }
 }
 
+impl From<&VectorHash<__m128i>> for VectorHash<__m16i> {
+    #[inline]
+    fn from(hash: &VectorHash<__m128i>) -> Self {
+        Self {
+            first: __m16i(hash.first),
+            last: __m16i(hash.last),
+        }
+    }
+}
+
 /// Single-substring searcher using an AVX2 algorithm based on the "Generic
 /// SIMD" algorithm [presented by Wojciech
 /// Muła](http://0x80.pl/articles/simd-strfind.html).
@@ -285,7 +307,6 @@ impl From<&VectorHash<__m128i>> for VectorHash<__m32i> {
 /// Rabin-Karp implementation.
 pub struct Avx2Searcher<N: Needle> {
     position: usize,
-    scalar_hash: ScalarHash,
     sse2_hash: VectorHash<__m128i>,
     avx2_hash: VectorHash<__m256i>,
     needle: N,
@@ -325,39 +346,15 @@ impl<N: Needle> Avx2Searcher<N> {
             assert_eq!(size, bytes.len());
         }
 
-        let scalar_hash = ScalarHash::from(bytes);
         let sse2_hash = VectorHash::new(bytes[0], bytes[position]);
         let avx2_hash = VectorHash::new(bytes[0], bytes[position]);
 
         Self {
             position,
-            scalar_hash,
             sse2_hash,
             avx2_hash,
             needle,
         }
-    }
-
-    #[inline]
-    fn scalar_search_in(&self, haystack: &[u8]) -> bool {
-        debug_assert!(haystack.len() >= self.needle.size());
-
-        let mut end = self.needle.size() - 1;
-        let mut hash = ScalarHash::from(&haystack[..end]);
-
-        while end < haystack.len() {
-            hash.push(*unsafe { haystack.get_unchecked(end) });
-            end += 1;
-
-            let start = end - self.needle.size();
-            if hash == self.scalar_hash && haystack[start..end] == *self.needle.as_bytes() {
-                return true;
-            }
-
-            hash.pop(*unsafe { haystack.get_unchecked(start) });
-        }
-
-        false
     }
 
     #[inline]
@@ -419,16 +416,10 @@ impl<N: Needle> Avx2Searcher<N> {
     unsafe fn vector_search_in<V: Vector>(
         &self,
         haystack: &[u8],
+        end: usize,
         hash: &VectorHash<V>,
-        next: unsafe fn(&Self, &[u8]) -> bool,
     ) -> bool {
         debug_assert!(haystack.len() >= self.needle.size());
-
-        let end = haystack.len() - self.needle.size() + 1;
-
-        if end < V::LANES {
-            return next(self, haystack);
-        }
 
         let mut chunks = haystack[..end].chunks_exact(V::LANES);
         while let Some(chunk) = chunks.next() {
@@ -452,28 +443,35 @@ impl<N: Needle> Avx2Searcher<N> {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn sse2_4_search_in(&self, haystack: &[u8]) -> bool {
+    unsafe fn sse2_2_search_in(&self, haystack: &[u8], end: usize) -> bool {
+        let hash = VectorHash::<__m16i>::from(&self.sse2_hash);
+        self.vector_search_in(haystack, end, &hash)
+    }
+
+    #[inline]
+    #[target_feature(enable = "avx2")]
+    unsafe fn sse2_4_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m32i>::from(&self.sse2_hash);
-        self.vector_search_in(haystack, &hash, Self::scalar_search_in)
+        self.vector_search_in(haystack, end, &hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn sse2_8_search_in(&self, haystack: &[u8]) -> bool {
+    unsafe fn sse2_8_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m64i>::from(&self.sse2_hash);
-        self.vector_search_in(haystack, &hash, Self::sse2_4_search_in)
+        self.vector_search_in(haystack, end, &hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn sse2_16_search_in(&self, haystack: &[u8]) -> bool {
-        self.vector_search_in(haystack, &self.sse2_hash, Self::sse2_8_search_in)
+    unsafe fn sse2_16_search_in(&self, haystack: &[u8], end: usize) -> bool {
+        self.vector_search_in(haystack, end, &self.sse2_hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn avx2_search_in(&self, haystack: &[u8]) -> bool {
-        self.vector_search_in(haystack, &self.avx2_hash, Self::sse2_16_search_in)
+    unsafe fn avx2_search_in(&self, haystack: &[u8], end: usize) -> bool {
+        self.vector_search_in(haystack, end, &self.avx2_hash)
     }
 
     /// Inlined version of `search_in` for hot call sites.
@@ -484,7 +482,21 @@ impl<N: Needle> Avx2Searcher<N> {
             return haystack == self.needle.as_bytes();
         }
 
-        self.avx2_search_in(haystack)
+        let end = haystack.len() - self.needle.size() + 1;
+
+        if end < __m16i::LANES {
+            unreachable!();
+        } else if end < __m32i::LANES {
+            self.sse2_2_search_in(haystack, end)
+        } else if end < __m64i::LANES {
+            self.sse2_4_search_in(haystack, end)
+        } else if end < __m128i::LANES {
+            self.sse2_8_search_in(haystack, end)
+        } else if end < __m256i::LANES {
+            self.sse2_16_search_in(haystack, end)
+        } else {
+            self.avx2_search_in(haystack, end)
+        }
     }
 
     /// Performs a substring search for the `needle` within `haystack`.
