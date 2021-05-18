@@ -33,7 +33,7 @@ trait Vector: Copy {
 
     unsafe fn set1_epi8(a: i8) -> Self;
 
-    unsafe fn loadu_si(a: *const Self) -> Self;
+    unsafe fn loadu_si(a: *const u8) -> Self;
 
     unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self;
 
@@ -58,7 +58,7 @@ impl Vector for __m16i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const Self) -> Self {
+    unsafe fn loadu_si(a: *const u8) -> Self {
         __m16i(_mm_set1_epi16(std::ptr::read_unaligned(a as *const i16)))
     }
 
@@ -97,7 +97,7 @@ impl Vector for __m32i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const Self) -> Self {
+    unsafe fn loadu_si(a: *const u8) -> Self {
         __m32i(_mm_set1_epi32(std::ptr::read_unaligned(a as *const i32)))
     }
 
@@ -136,7 +136,7 @@ impl Vector for __m64i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const Self) -> Self {
+    unsafe fn loadu_si(a: *const u8) -> Self {
         __m64i(_mm_set_epi64x(0, std::ptr::read_unaligned(a as *const i64)))
     }
 
@@ -170,8 +170,8 @@ impl Vector for __m128i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const Self) -> Self {
-        _mm_loadu_si128(a)
+    unsafe fn loadu_si(a: *const u8) -> Self {
+        _mm_loadu_si128(a as *const Self)
     }
 
     #[inline]
@@ -204,8 +204,8 @@ impl Vector for __m256i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const Self) -> Self {
-        _mm256_loadu_si256(a)
+    unsafe fn loadu_si(a: *const u8) -> Self {
+        _mm256_loadu_si256(a as *const Self)
     }
 
     #[inline]
@@ -366,8 +366,8 @@ impl<N: Needle> Avx2Searcher<N> {
         start: *const u8,
         mask: i32,
     ) -> bool {
-        let first = Vector::loadu_si(start.cast());
-        let last = Vector::loadu_si(start.add(self.position).cast());
+        let first = Vector::loadu_si(start);
+        let last = Vector::loadu_si(start.add(self.position));
 
         let eq_first = Vector::cmpeq_epi8(hash.first, first);
         let eq_last = Vector::cmpeq_epi8(hash.last, last);
