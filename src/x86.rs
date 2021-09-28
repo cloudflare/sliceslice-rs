@@ -422,7 +422,7 @@ impl<N: Needle> Avx2Searcher<N> {
         debug_assert!(haystack.len() >= self.needle.size());
 
         let mut chunks = haystack[..end].chunks_exact(V::LANES);
-        while let Some(chunk) = chunks.next() {
+        for chunk in &mut chunks {
             if self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1) {
                 return true;
             }
@@ -817,7 +817,7 @@ mod tests {
             const SIZE: Option<usize> = Some(2);
 
             fn as_bytes(&self) -> &[u8] {
-                &self.0
+                self.0
             }
         }
 
