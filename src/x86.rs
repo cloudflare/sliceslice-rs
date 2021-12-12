@@ -1,6 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 
-use crate::{bits, memcmp, MemchrSearcher, Needle, NeedleWithSize, Vector, VectorHash};
+use crate::{MemchrSearcher, Needle, NeedleWithSize, Searcher, Vector, VectorHash};
 use seq_macro::seq;
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
@@ -296,119 +296,35 @@ impl<N: Needle> Avx2Searcher<N> {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn vector_search_in_chunk<V: Vector>(
-        &self,
-        haystack: &[u8],
-        hash: &VectorHash<V>,
-        start: *const u8,
-        mask: i32,
-    ) -> bool {
-        let first = Vector::loadu_si(start);
-        let last = Vector::loadu_si(start.add(self.position));
-
-        let eq_first = Vector::cmpeq_epi8(hash.first, first);
-        let eq_last = Vector::cmpeq_epi8(hash.last, last);
-
-        let eq = Vector::and_si(eq_first, eq_last);
-        let mut eq = (Vector::movemask_epi8(eq) & mask) as u32;
-
-        let start = start as usize - haystack.as_ptr() as usize;
-        let chunk = haystack.as_ptr().add(start + 1);
-        let needle = self.needle.as_bytes().as_ptr().add(1);
-
-        while eq != 0 {
-            let chunk = chunk.add(eq.trailing_zeros() as usize);
-            let equal = match N::SIZE {
-                Some(0) => unreachable!(),
-                Some(1) => memcmp::specialized::<0>(chunk, needle),
-                Some(2) => memcmp::specialized::<1>(chunk, needle),
-                Some(3) => memcmp::specialized::<2>(chunk, needle),
-                Some(4) => memcmp::specialized::<3>(chunk, needle),
-                Some(5) => memcmp::specialized::<4>(chunk, needle),
-                Some(6) => memcmp::specialized::<5>(chunk, needle),
-                Some(7) => memcmp::specialized::<6>(chunk, needle),
-                Some(8) => memcmp::specialized::<7>(chunk, needle),
-                Some(9) => memcmp::specialized::<8>(chunk, needle),
-                Some(10) => memcmp::specialized::<9>(chunk, needle),
-                Some(11) => memcmp::specialized::<10>(chunk, needle),
-                Some(12) => memcmp::specialized::<11>(chunk, needle),
-                Some(13) => memcmp::specialized::<12>(chunk, needle),
-                Some(14) => memcmp::specialized::<13>(chunk, needle),
-                Some(15) => memcmp::specialized::<14>(chunk, needle),
-                Some(16) => memcmp::specialized::<15>(chunk, needle),
-                _ => memcmp::generic(chunk, needle, self.needle.size() - 1),
-            };
-            if equal {
-                return true;
-            }
-
-            eq = bits::clear_leftmost_set(eq);
-        }
-
-        false
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
-    unsafe fn vector_search_in<V: Vector>(
-        &self,
-        haystack: &[u8],
-        end: usize,
-        hash: &VectorHash<V>,
-    ) -> bool {
-        debug_assert!(haystack.len() >= self.needle.size());
-
-        let mut chunks = haystack[..end].chunks_exact(V::LANES);
-        for chunk in &mut chunks {
-            if self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1) {
-                return true;
-            }
-        }
-
-        let remainder = chunks.remainder().len();
-        if remainder > 0 {
-            let start = haystack.as_ptr().add(end - V::LANES);
-            let mask = -1 << (V::LANES - remainder);
-
-            if self.vector_search_in_chunk(haystack, hash, start, mask) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
     unsafe fn sse2_2_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m16i>::from(&self.sse2_hash);
-        self.vector_search_in(haystack, end, &hash)
+        self.vector_search_in_avx2_version(haystack, end, &hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn sse2_4_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m32i>::from(&self.sse2_hash);
-        self.vector_search_in(haystack, end, &hash)
+        self.vector_search_in_avx2_version(haystack, end, &hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn sse2_8_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m64i>::from(&self.sse2_hash);
-        self.vector_search_in(haystack, end, &hash)
+        self.vector_search_in_avx2_version(haystack, end, &hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn sse2_16_search_in(&self, haystack: &[u8], end: usize) -> bool {
-        self.vector_search_in(haystack, end, &self.sse2_hash)
+        self.vector_search_in_avx2_version(haystack, end, &self.sse2_hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn avx2_search_in(&self, haystack: &[u8], end: usize) -> bool {
-        self.vector_search_in(haystack, end, &self.avx2_hash)
+        self.vector_search_in_avx2_version(haystack, end, &self.avx2_hash)
     }
 
     /// Inlined version of `search_in` for hot call sites.
@@ -440,6 +356,18 @@ impl<N: Needle> Avx2Searcher<N> {
     #[target_feature(enable = "avx2")]
     pub unsafe fn search_in(&self, haystack: &[u8]) -> bool {
         self.inlined_search_in(haystack)
+    }
+}
+
+impl<N: Needle> Searcher<N> for Avx2Searcher<N> {
+    #[inline(always)]
+    fn needle(&self) -> &N {
+        &self.needle
+    }
+
+    #[inline(always)]
+    fn position(&self) -> usize {
+        self.position
     }
 }
 

@@ -192,6 +192,98 @@ impl<T: Vector, V: Vector + From<T>> From<&VectorHash<T>> for VectorHash<V> {
     }
 }
 
+trait Searcher<N: NeedleWithSize + ?Sized> {
+    fn needle(&self) -> &N;
+
+    fn position(&self) -> usize;
+
+    #[inline]
+    #[multiversion::multiversion]
+    #[clone(target = "[x86|x86_64]+avx2")]
+    unsafe fn vector_search_in_chunk<V: Vector>(
+        &self,
+        haystack: &[u8],
+        hash: &VectorHash<V>,
+        start: *const u8,
+        mask: i32,
+    ) -> bool {
+        let first = Vector::loadu_si(start);
+        let last = Vector::loadu_si(start.add(self.position()));
+
+        let eq_first = Vector::cmpeq_epi8(hash.first, first);
+        let eq_last = Vector::cmpeq_epi8(hash.last, last);
+
+        let eq = Vector::and_si(eq_first, eq_last);
+        let mut eq = (Vector::movemask_epi8(eq) & mask) as u32;
+
+        let start = start as usize - haystack.as_ptr() as usize;
+        let chunk = haystack.as_ptr().add(start + 1);
+        let needle = self.needle().as_bytes().as_ptr().add(1);
+
+        while eq != 0 {
+            let chunk = chunk.add(eq.trailing_zeros() as usize);
+            let equal = match N::SIZE {
+                Some(0) => unreachable!(),
+                Some(1) => dispatch!(memcmp::specialized::<0>(chunk, needle)),
+                Some(2) => dispatch!(memcmp::specialized::<1>(chunk, needle)),
+                Some(3) => dispatch!(memcmp::specialized::<2>(chunk, needle)),
+                Some(4) => dispatch!(memcmp::specialized::<3>(chunk, needle)),
+                Some(5) => dispatch!(memcmp::specialized::<4>(chunk, needle)),
+                Some(6) => dispatch!(memcmp::specialized::<5>(chunk, needle)),
+                Some(7) => dispatch!(memcmp::specialized::<6>(chunk, needle)),
+                Some(8) => dispatch!(memcmp::specialized::<7>(chunk, needle)),
+                Some(9) => dispatch!(memcmp::specialized::<8>(chunk, needle)),
+                Some(10) => dispatch!(memcmp::specialized::<9>(chunk, needle)),
+                Some(11) => dispatch!(memcmp::specialized::<10>(chunk, needle)),
+                Some(12) => dispatch!(memcmp::specialized::<11>(chunk, needle)),
+                Some(13) => dispatch!(memcmp::specialized::<12>(chunk, needle)),
+                Some(14) => dispatch!(memcmp::specialized::<13>(chunk, needle)),
+                Some(15) => dispatch!(memcmp::specialized::<14>(chunk, needle)),
+                Some(16) => dispatch!(memcmp::specialized::<15>(chunk, needle)),
+                _ => dispatch!(memcmp::generic(chunk, needle, self.needle().size() - 1)),
+            };
+            if equal {
+                return true;
+            }
+
+            eq = dispatch!(bits::clear_leftmost_set(eq));
+        }
+
+        false
+    }
+
+    #[inline]
+    #[multiversion::multiversion]
+    #[clone(target = "[x86|x86_64]+avx2")]
+    unsafe fn vector_search_in<V: Vector>(
+        &self,
+        haystack: &[u8],
+        end: usize,
+        hash: &VectorHash<V>,
+    ) -> bool {
+        debug_assert!(haystack.len() >= self.needle().size());
+
+        let mut chunks = haystack[..end].chunks_exact(V::LANES);
+        for chunk in &mut chunks {
+            if dispatch!(self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1)) {
+                return true;
+            }
+        }
+
+        let remainder = chunks.remainder().len();
+        if remainder > 0 {
+            let start = haystack.as_ptr().add(end - V::LANES);
+            let mask = -1 << (V::LANES - remainder);
+
+            if dispatch!(self.vector_search_in_chunk(haystack, hash, start, mask)) {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{MemchrSearcher, Needle};

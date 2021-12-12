@@ -11,6 +11,7 @@ keywords = ["search", "text", "string", "single", "simd"]
 
 [dependencies]
 memchr = "2.3"
+multiversion = { version = "0.6", default-features = false }
 seq-macro = "0.2"
 
 [dev-dependencies]
