@@ -150,7 +150,7 @@ impl MemchrSearcher {
 }
 
 /// Represents a generic SIMD register type.
-trait Vector: Copy {
+trait Vector: Copy + std::fmt::Debug {
     const LANES: usize;
 
     unsafe fn set1_epi8(a: i8) -> Self;
@@ -208,18 +208,28 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
         let first = Vector::loadu_si(start);
         let last = Vector::loadu_si(start.add(self.position()));
 
+        // Uncommenting the following lines makes it work
+        // println!("[vector_search_in_chunk] hash.first={:?}", hash.first);
+        println!("[vector_search_in_chunk] first={:?}", first);
         let eq_first = Vector::cmpeq_epi8(hash.first, first);
         let eq_last = Vector::cmpeq_epi8(hash.last, last);
 
         let eq = Vector::and_si(eq_first, eq_last);
+        println!(
+            "[vector_search_in_chunk] eq_first={:?}, eq_last={:?}",
+            eq_first, eq_last
+        );
         let mut eq = (Vector::movemask_epi8(eq) & mask) as u32;
 
         let start = start as usize - haystack.as_ptr() as usize;
         let chunk = haystack.as_ptr().add(start + 1);
         let needle = self.needle().as_bytes().as_ptr().add(1);
 
+        println!("[vector_search_in_chunk] eq={}", eq);
+
         while eq != 0 {
             let chunk = chunk.add(eq.trailing_zeros() as usize);
+            println!("[vector_search_in_chunk] chunk={:?}", chunk);
             let equal = match N::SIZE {
                 Some(0) => unreachable!(),
                 Some(1) => memcmp::specialized::<0>(chunk, needle),
@@ -245,6 +255,45 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
             }
 
             eq = bits::clear_leftmost_set(eq);
+        }
+
+        false
+    }
+
+    #[inline]
+    // Uncommenting the following lines makes it work
+    // #[target_feature(enable = "avx2")]
+    unsafe fn vector_search_in<V: Vector>(
+        &self,
+        haystack: &[u8],
+        end: usize,
+        hash: &VectorHash<V>,
+    ) -> bool {
+        println!(
+            "[vector_search_in] haystack({})={:?}, end={}",
+            haystack.len(),
+            haystack,
+            end
+        );
+        debug_assert!(haystack.len() >= self.needle().size());
+
+        let mut chunks = haystack[..end].chunks_exact(V::LANES);
+        for chunk in &mut chunks {
+            println!("[vector_search_in] chunk({})={:?}", chunk.len(), chunk);
+            if self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1) {
+                return true;
+            }
+        }
+
+        let remainder = chunks.remainder().len();
+        println!("[vector_search_in] remainder: {}", remainder);
+        if remainder > 0 {
+            let start = haystack.as_ptr().add(end - V::LANES);
+            let mask = -1 << (V::LANES - remainder);
+
+            if self.vector_search_in_chunk(haystack, hash, start, mask) {
+                return true;
+            }
         }
 
         false
@@ -331,11 +380,13 @@ mod tests {
                 if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
                     use crate::x86::{Avx2Searcher, DynamicAvx2Searcher};
 
+                    println!("test for {}", position);
+
                     let searcher =  unsafe { Avx2Searcher::with_position(needle, position) };
                     assert_eq!(unsafe { searcher.search_in(haystack) }, result);
 
-                    let searcher =  unsafe { DynamicAvx2Searcher::with_position(needle, position) };
-                    assert_eq!(unsafe { searcher.search_in(haystack) }, result);
+                    /*let searcher =  unsafe { DynamicAvx2Searcher::with_position(needle, position) };
+                    assert_eq!(unsafe { searcher.search_in(haystack) }, result);*/
                 } else {
                     compile_error!("Unsupported architecture");
                 }
@@ -453,18 +504,18 @@ mod tests {
 
     #[test]
     fn search_middle() {
-        assert!(search(b"xyz", b"y"));
+        /*assert!(search(b"xyz", b"y"));
 
         assert!(search(b"wxyz", b"xy"));
 
-        assert!(search(b"foobarfoo", b"bar"));
+        assert!(search(b"foobarfoo", b"bar"));*/
 
         assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit",
             b"consectetur"
         ));
 
-        assert!(search(
+        /*assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"orci"
         ));
@@ -472,6 +523,6 @@ mod tests {
         assert!(search(
             b"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas commodo posuere orci a consectetur. Ut mattis turpis ut auctor consequat. Aliquam iaculis fringilla mi, nec aliquet purus",
             b"Maecenas commodo posuere orci a consectetur"
-        ));
+        ));*/
     }
 }

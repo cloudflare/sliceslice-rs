@@ -7,7 +7,7 @@ use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 #[allow(non_camel_case_types)]
 struct __m16i(__m128i);
@@ -53,7 +53,7 @@ impl From<__m128i> for __m16i {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 #[allow(non_camel_case_types)]
 struct __m32i(__m128i);
@@ -99,7 +99,7 @@ impl From<__m128i> for __m32i {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[repr(transparent)]
 #[allow(non_camel_case_types)]
 struct __m64i(__m128i);
@@ -296,36 +296,6 @@ impl<N: Needle> Avx2Searcher<N> {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn vector_search_in<V: Vector>(
-        &self,
-        haystack: &[u8],
-        end: usize,
-        hash: &VectorHash<V>,
-    ) -> bool {
-        debug_assert!(haystack.len() >= self.needle.size());
-
-        let mut chunks = haystack[..end].chunks_exact(V::LANES);
-        for chunk in &mut chunks {
-            if self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1) {
-                return true;
-            }
-        }
-
-        let remainder = chunks.remainder().len();
-        if remainder > 0 {
-            let start = haystack.as_ptr().add(end - V::LANES);
-            let mask = -1 << (V::LANES - remainder);
-
-            if self.vector_search_in_chunk(haystack, hash, start, mask) {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    #[inline]
-    #[target_feature(enable = "avx2")]
     unsafe fn sse2_2_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m16i>::from(&self.sse2_hash);
         self.vector_search_in(haystack, end, &hash)
@@ -361,6 +331,11 @@ impl<N: Needle> Avx2Searcher<N> {
     #[inline]
     #[target_feature(enable = "avx2")]
     pub unsafe fn inlined_search_in(&self, haystack: &[u8]) -> bool {
+        println!(
+            "[inlined_search_in] haystack({})={:?}",
+            haystack.len(),
+            haystack
+        );
         if haystack.len() <= self.needle.size() {
             return haystack == self.needle.as_bytes();
         }
@@ -385,6 +360,7 @@ impl<N: Needle> Avx2Searcher<N> {
     /// Performs a substring search for the `needle` within `haystack`.
     #[target_feature(enable = "avx2")]
     pub unsafe fn search_in(&self, haystack: &[u8]) -> bool {
+        println!("[search_in] haystack({})={:?}", haystack.len(), haystack);
         self.inlined_search_in(haystack)
     }
 }
