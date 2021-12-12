@@ -46,6 +46,13 @@ impl Vector for __m16i {
     }
 }
 
+impl From<__m128i> for __m16i {
+    #[inline]
+    fn from(vector: __m128i) -> Self {
+        Self(vector)
+    }
+}
+
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 #[allow(non_camel_case_types)]
@@ -85,6 +92,13 @@ impl Vector for __m32i {
     }
 }
 
+impl From<__m128i> for __m32i {
+    #[inline]
+    fn from(vector: __m128i) -> Self {
+        Self(vector)
+    }
+}
+
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 #[allow(non_camel_case_types)]
@@ -121,6 +135,13 @@ impl Vector for __m64i {
     #[target_feature(enable = "avx2")]
     unsafe fn movemask_epi8(a: Self) -> i32 {
         _mm_movemask_epi8(a.0) & 0xFF
+    }
+}
+
+impl From<__m128i> for __m64i {
+    #[inline]
+    fn from(vector: __m128i) -> Self {
+        Self(vector)
     }
 }
 
@@ -189,36 +210,6 @@ impl Vector for __m256i {
     #[target_feature(enable = "avx2")]
     unsafe fn movemask_epi8(a: Self) -> i32 {
         _mm256_movemask_epi8(a)
-    }
-}
-
-impl From<&VectorHash<__m128i>> for VectorHash<__m64i> {
-    #[inline]
-    fn from(hash: &VectorHash<__m128i>) -> Self {
-        Self {
-            first: __m64i(hash.first),
-            last: __m64i(hash.last),
-        }
-    }
-}
-
-impl From<&VectorHash<__m128i>> for VectorHash<__m32i> {
-    #[inline]
-    fn from(hash: &VectorHash<__m128i>) -> Self {
-        Self {
-            first: __m32i(hash.first),
-            last: __m32i(hash.last),
-        }
-    }
-}
-
-impl From<&VectorHash<__m128i>> for VectorHash<__m16i> {
-    #[inline]
-    fn from(hash: &VectorHash<__m128i>) -> Self {
-        Self {
-            first: __m16i(hash.first),
-            last: __m16i(hash.last),
-        }
     }
 }
 
