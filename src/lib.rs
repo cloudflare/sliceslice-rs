@@ -182,6 +182,16 @@ impl<V: Vector> VectorHash<V> {
     }
 }
 
+impl<T: Vector, V: Vector + From<T>> From<&VectorHash<T>> for VectorHash<V> {
+    #[inline]
+    fn from(hash: &VectorHash<T>) -> Self {
+        Self {
+            first: V::from(hash.first),
+            last: V::from(hash.last),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{MemchrSearcher, Needle};
