@@ -1,6 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 
-use crate::{bits, memcmp, MemchrSearcher, Needle, NeedleWithSize, Vector};
+use crate::{bits, memcmp, MemchrSearcher, Needle, NeedleWithSize, Vector, VectorHash};
 use seq_macro::seq;
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
@@ -189,25 +189,6 @@ impl Vector for __m256i {
     #[target_feature(enable = "avx2")]
     unsafe fn movemask_epi8(a: Self) -> i32 {
         _mm256_movemask_epi8(a)
-    }
-}
-
-/// Hash of the first and "last" bytes in the needle for use with the SIMD
-/// algorithm implemented by `Avx2Searcher::vector_search_in`. As explained, any
-/// byte can be chosen to represent the "last" byte of the hash to prevent
-/// worst-case attacks.
-struct VectorHash<V: Vector> {
-    first: V,
-    last: V,
-}
-
-impl<V: Vector> VectorHash<V> {
-    #[target_feature(enable = "avx2")]
-    unsafe fn new(first: u8, last: u8) -> Self {
-        Self {
-            first: Vector::set1_epi8(first as i8),
-            last: Vector::set1_epi8(last as i8),
-        }
     }
 }
 
