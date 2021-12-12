@@ -1,28 +1,11 @@
 #![allow(clippy::missing_safety_doc)]
 
-use crate::{bits, memcmp, MemchrSearcher, Needle, NeedleWithSize};
+use crate::{bits, memcmp, MemchrSearcher, Needle, NeedleWithSize, Vector};
 use seq_macro::seq;
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
-
-/// Represents an SIMD register type that is x86-specific (but could be used
-/// more generically) in order to share functionality between SSE2, AVX2 and
-/// possibly future implementations.
-trait Vector: Copy {
-    const LANES: usize;
-
-    unsafe fn set1_epi8(a: i8) -> Self;
-
-    unsafe fn loadu_si(a: *const u8) -> Self;
-
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self;
-
-    unsafe fn and_si(a: Self, b: Self) -> Self;
-
-    unsafe fn movemask_epi8(a: Self) -> i32;
-}
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]

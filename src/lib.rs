@@ -149,6 +149,21 @@ impl MemchrSearcher {
     }
 }
 
+/// Represents a generic SIMD register type.
+trait Vector: Copy {
+    const LANES: usize;
+
+    unsafe fn set1_epi8(a: i8) -> Self;
+
+    unsafe fn loadu_si(a: *const u8) -> Self;
+
+    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self;
+
+    unsafe fn and_si(a: Self, b: Self) -> Self;
+
+    unsafe fn movemask_epi8(a: Self) -> i32;
+}
+
 #[cfg(test)]
 mod tests {
     use super::{MemchrSearcher, Needle};
