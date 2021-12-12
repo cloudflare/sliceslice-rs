@@ -106,6 +106,24 @@ impl Needle for Vec<u8> {
     }
 }
 
+trait NeedleWithSize: Needle {
+    #[inline]
+    fn size(&self) -> usize {
+        if let Some(size) = Self::SIZE {
+            size
+        } else {
+            self.as_bytes().len()
+        }
+    }
+
+    #[inline]
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+}
+
+impl<N: Needle + ?Sized> NeedleWithSize for N {}
+
 /// Single-byte searcher using `memchr` for faster matching.
 pub struct MemchrSearcher(u8);
 
