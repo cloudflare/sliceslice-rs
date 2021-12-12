@@ -1,29 +1,11 @@
 #![allow(clippy::missing_safety_doc)]
 
-use crate::{bits, memcmp, MemchrSearcher, Needle};
+use crate::{bits, memcmp, MemchrSearcher, Needle, NeedleWithSize};
 use seq_macro::seq;
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
-
-trait NeedleWithSize: Needle {
-    #[inline]
-    fn size(&self) -> usize {
-        if let Some(size) = Self::SIZE {
-            size
-        } else {
-            self.as_bytes().len()
-        }
-    }
-
-    #[inline]
-    fn is_empty(&self) -> bool {
-        self.size() == 0
-    }
-}
-
-impl<N: Needle + ?Sized> NeedleWithSize for N {}
 
 /// Represents an SIMD register type that is x86-specific (but could be used
 /// more generically) in order to share functionality between SSE2, AVX2 and
