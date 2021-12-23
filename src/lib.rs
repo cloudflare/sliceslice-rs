@@ -26,6 +26,10 @@
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub mod x86;
 
+/// Substring search implementations using wasm32 architecture features.
+#[cfg(target_arch = "wasm32")]
+pub mod wasm32;
+
 mod bits;
 mod memcmp;
 
@@ -200,6 +204,7 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[inline]
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
+    #[clone(target = "wasm32+simd128")]
     unsafe fn vector_search_in_chunk<V: Vector>(
         &self,
         haystack: &[u8],
@@ -255,6 +260,7 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[inline]
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
+    #[clone(target = "wasm32+simd128")]
     unsafe fn vector_search_in<V: Vector>(
         &self,
         haystack: &[u8],
@@ -368,6 +374,11 @@ mod tests {
                     assert_eq!(unsafe { searcher.search_in(haystack) }, result);
 
                     let searcher =  unsafe { DynamicAvx2Searcher::with_position(needle, position) };
+                    assert_eq!(unsafe { searcher.search_in(haystack) }, result);
+                } else if #[cfg(target_arch = "wasm32")] {
+                    use crate::wasm32::Wasm32Searcher;
+
+                    let searcher = unsafe { Wasm32Searcher::with_position(needle, position) };
                     assert_eq!(unsafe { searcher.search_in(haystack) }, result);
                 } else {
                     compile_error!("Unsupported architecture");
