@@ -20,6 +20,10 @@ fn search(haystack: &str, needle: &str) {
             use sliceslice::x86::DynamicAvx2Searcher;
             let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
             assert_eq!(unsafe { searcher.search_in(haystack) }, result);
+        } else if #[cfg(target_arch = "wasm32")] {
+            use sliceslice::wasm32::Wasm32Searcher;
+            let searcher = unsafe { Wasm32Searcher::new(needle) };
+            assert_eq!(unsafe { searcher.search_in(haystack) }, result);
         } else {
             compile_error!("Unsupported architecture");
         }
