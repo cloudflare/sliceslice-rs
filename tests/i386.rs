@@ -1,7 +1,7 @@
-use std::{
-    fs::{self, File},
-    io::{BufRead, BufReader},
-};
+use std::io::{BufRead, BufReader};
+
+static I386: &[u8] = include_bytes!("../data/i386.txt");
+static WORDS: &[u8] = include_bytes!("../data/words.txt");
 
 fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack
@@ -15,17 +15,20 @@ fn search(haystack: &str, needle: &str) {
 
     let result = find_subsequence(haystack, needle).is_some();
 
-    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    {
-        use sliceslice::x86::DynamicAvx2Searcher;
-        let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
-        assert_eq!(unsafe { searcher.search_in(haystack) }, result);
+    cfg_if::cfg_if! {
+        if #[cfg(any(target_arch = "x86", target_arch = "x86_64"))] {
+            use sliceslice::x86::DynamicAvx2Searcher;
+            let searcher = unsafe { DynamicAvx2Searcher::new(needle.to_owned().into_boxed_slice()) };
+            assert_eq!(unsafe { searcher.search_in(haystack) }, result);
+        } else {
+            compile_error!("Unsupported architecture");
+        }
     }
 }
 
 #[test]
 fn search_short_haystack() {
-    let mut needles = BufReader::new(File::open("data/words.txt").unwrap())
+    let mut needles = BufReader::new(WORDS)
         .lines()
         .map(Result::unwrap)
         .collect::<Vec<_>>();
@@ -40,12 +43,9 @@ fn search_short_haystack() {
 
 #[test]
 fn search_long_haystack() {
-    let haystack = fs::read("data/i386.txt").unwrap();
-    let haystack = String::from_utf8_lossy(&haystack);
+    let haystack = String::from_utf8_lossy(I386);
 
-    let needles = BufReader::new(File::open("data/words.txt").unwrap())
-        .lines()
-        .map(Result::unwrap);
+    let needles = BufReader::new(WORDS).lines().map(Result::unwrap);
 
     for needle in needles {
         search(&haystack, &needle);
