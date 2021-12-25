@@ -157,15 +157,15 @@ impl MemchrSearcher {
 trait Vector: Copy {
     const LANES: usize;
 
-    unsafe fn set1_epi8(a: i8) -> Self;
+    unsafe fn splat(a: u8) -> Self;
 
-    unsafe fn loadu_si(a: *const u8) -> Self;
+    unsafe fn load(a: *const u8) -> Self;
 
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self;
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self;
 
-    unsafe fn and_si(a: Self, b: Self) -> Self;
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self;
 
-    unsafe fn movemask_epi8(a: Self) -> i32;
+    unsafe fn to_bitmask(a: Self) -> i32;
 }
 
 /// Hash of the first and "last" bytes in the needle for use with the SIMD
@@ -180,8 +180,8 @@ struct VectorHash<V: Vector> {
 impl<V: Vector> VectorHash<V> {
     unsafe fn new(first: u8, last: u8) -> Self {
         Self {
-            first: Vector::set1_epi8(first as i8),
-            last: Vector::set1_epi8(last as i8),
+            first: Vector::splat(first),
+            last: Vector::splat(last),
         }
     }
 }
@@ -212,14 +212,14 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
         start: *const u8,
         mask: i32,
     ) -> bool {
-        let first = Vector::loadu_si(start);
-        let last = Vector::loadu_si(start.add(self.position()));
+        let first = Vector::load(start);
+        let last = Vector::load(start.add(self.position()));
 
-        let eq_first = Vector::cmpeq_epi8(hash.first, first);
-        let eq_last = Vector::cmpeq_epi8(hash.last, last);
+        let eq_first = Vector::lanes_eq(hash.first, first);
+        let eq_last = Vector::lanes_eq(hash.last, last);
 
-        let eq = Vector::and_si(eq_first, eq_last);
-        let mut eq = (Vector::movemask_epi8(eq) & mask) as u32;
+        let eq = Vector::bitwise_and(eq_first, eq_last);
+        let mut eq = (Vector::to_bitmask(eq) & mask) as u32;
 
         let start = start as usize - haystack.as_ptr() as usize;
         let chunk = haystack.as_ptr().add(start + 1);
