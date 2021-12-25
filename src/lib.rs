@@ -5,6 +5,12 @@
 //! crate](https://github.com/BurntSushi/aho-corasick).
 
 #![warn(missing_docs)]
+#![cfg_attr(target_arch = "aarch64", feature(stdsimd))]
+#![cfg_attr(target_arch = "aarch64", feature(aarch64_target_feature))]
+
+/// Substring search implementations using aarch64 architecture features.
+#[cfg(target_arch = "aarch64")]
+pub mod aarch64;
 
 /// Substring search implementations using x86 architecture features.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -189,6 +195,7 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
     #[clone(target = "wasm32+simd128")]
+    #[clone(target = "aarch64+neon")]
     unsafe fn vector_search_in_chunk<V: Vector>(
         &self,
         haystack: &[u8],
@@ -245,6 +252,7 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
     #[clone(target = "wasm32+simd128")]
+    #[clone(target = "aarch64+neon")]
     unsafe fn vector_search_in<V: Vector>(
         &self,
         haystack: &[u8],
@@ -363,6 +371,11 @@ mod tests {
                     use crate::wasm32::Wasm32Searcher;
 
                     let searcher = unsafe { Wasm32Searcher::with_position(needle, position) };
+                    assert_eq!(unsafe { searcher.search_in(haystack) }, result);
+                } else if #[cfg(target_arch = "aarch64")] {
+                    use crate::aarch64::NeonSearcher;
+
+                    let searcher = unsafe { NeonSearcher::with_position(needle, position) };
                     assert_eq!(unsafe { searcher.search_in(haystack) }, result);
                 } else {
                     compile_error!("Unsupported architecture");
