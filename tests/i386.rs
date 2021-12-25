@@ -24,6 +24,10 @@ fn search(haystack: &str, needle: &str) {
             use sliceslice::wasm32::Wasm32Searcher;
             let searcher = unsafe { Wasm32Searcher::new(needle) };
             assert_eq!(unsafe { searcher.search_in(haystack) }, result);
+        } else if #[cfg(target_arch = "aarch64")] {
+            use sliceslice::aarch64::NeonSearcher;
+            let searcher = unsafe { NeonSearcher::new(needle) };
+            assert_eq!(unsafe { searcher.search_in(haystack) }, result);
         } else {
             compile_error!("Unsupported architecture");
         }
