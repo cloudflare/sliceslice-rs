@@ -17,31 +17,31 @@ impl Vector for __m16i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        __m16i(_mm_set1_epi8(a))
+    unsafe fn splat(a: u8) -> Self {
+        __m16i(_mm_set1_epi8(a as i8))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         __m16i(_mm_set1_epi16(std::ptr::read_unaligned(a as *const i16)))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         __m16i(_mm_cmpeq_epi8(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         __m16i(_mm_and_si128(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         _mm_movemask_epi8(a.0) & 0x3
     }
 }
@@ -63,31 +63,31 @@ impl Vector for __m32i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        __m32i(_mm_set1_epi8(a))
+    unsafe fn splat(a: u8) -> Self {
+        __m32i(_mm_set1_epi8(a as i8))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         __m32i(_mm_set1_epi32(std::ptr::read_unaligned(a as *const i32)))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         __m32i(_mm_cmpeq_epi8(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         __m32i(_mm_and_si128(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         _mm_movemask_epi8(a.0) & 0xF
     }
 }
@@ -109,31 +109,31 @@ impl Vector for __m64i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        __m64i(_mm_set1_epi8(a))
+    unsafe fn splat(a: u8) -> Self {
+        __m64i(_mm_set1_epi8(a as i8))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         __m64i(_mm_set1_epi64x(std::ptr::read_unaligned(a as *const i64)))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         __m64i(_mm_cmpeq_epi8(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         __m64i(_mm_and_si128(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         _mm_movemask_epi8(a.0) & 0xFF
     }
 }
@@ -150,31 +150,31 @@ impl Vector for __m128i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        _mm_set1_epi8(a)
+    unsafe fn splat(a: u8) -> Self {
+        _mm_set1_epi8(a as i8)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         _mm_loadu_si128(a as *const Self)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         _mm_cmpeq_epi8(a, b)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         _mm_and_si128(a, b)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         _mm_movemask_epi8(a)
     }
 }
@@ -184,31 +184,31 @@ impl Vector for __m256i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        _mm256_set1_epi8(a)
+    unsafe fn splat(a: u8) -> Self {
+        _mm256_set1_epi8(a as i8)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         _mm256_loadu_si256(a as *const Self)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         _mm256_cmpeq_epi8(a, b)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         _mm256_and_si256(a, b)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         _mm256_movemask_epi8(a)
     }
 }

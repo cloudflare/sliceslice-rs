@@ -9,31 +9,31 @@ impl Vector for v128 {
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        u8x16_splat(a as u8)
+    unsafe fn splat(a: u8) -> Self {
+        u8x16_splat(a)
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         std::ptr::read_unaligned(a as *const v128)
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         u8x16_eq(a, b)
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         v128_and(a, b)
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         u8x16_bitmask(a) as i32
     }
 }
@@ -48,31 +48,31 @@ impl Vector for v64 {
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        Self(u8x16_splat(a as u8))
+    unsafe fn splat(a: u8) -> Self {
+        Self(u8x16_splat(a))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         Self(u64x2_splat(std::ptr::read_unaligned(a as *const u64)))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         Self(u8x16_eq(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         Self(v128_and(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         (u8x16_bitmask(a.0) & 0xFF) as i32
     }
 }
@@ -93,31 +93,31 @@ impl Vector for v32 {
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        Self(u8x16_splat(a as u8))
+    unsafe fn splat(a: u8) -> Self {
+        Self(u8x16_splat(a))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         Self(u32x4_splat(std::ptr::read_unaligned(a as *const u32)))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         Self(u8x16_eq(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         Self(v128_and(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         (u8x16_bitmask(a.0) & 0xF) as i32
     }
 }
@@ -138,31 +138,31 @@ impl Vector for v16 {
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn set1_epi8(a: i8) -> Self {
-        Self(u8x16_splat(a as u8))
+    unsafe fn splat(a: u8) -> Self {
+        Self(u8x16_splat(a))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn loadu_si(a: *const u8) -> Self {
+    unsafe fn load(a: *const u8) -> Self {
         Self(u16x8_splat(std::ptr::read_unaligned(a as *const u16)))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn cmpeq_epi8(a: Self, b: Self) -> Self {
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self {
         Self(u8x16_eq(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn and_si(a: Self, b: Self) -> Self {
+    unsafe fn bitwise_and(a: Self, b: Self) -> Self {
         Self(v128_and(a.0, b.0))
     }
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn movemask_epi8(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> i32 {
         (u8x16_bitmask(a.0) & 0x3) as i32
     }
 }
