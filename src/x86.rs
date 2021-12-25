@@ -1,3 +1,19 @@
+//! # Example
+//!
+//! ```
+//! use sliceslice::x86::DynamicAvx2Searcher;
+//!
+//! let searcher = unsafe { DynamicAvx2Searcher::new(b"ipsum") };
+//!
+//! assert!(unsafe {
+//!     searcher.search_in(b"Lorem ipsum dolor sit amet, consectetur adipiscing elit")
+//! });
+//!
+//! assert!(!unsafe {
+//!     searcher.search_in(b"foo bar baz qux quux quuz corge grault garply waldo fred")
+//! });
+//! ```
+
 #![allow(clippy::missing_safety_doc)]
 
 use crate::{MemchrSearcher, Needle, NeedleWithSize, Searcher, Vector, VectorHash};
