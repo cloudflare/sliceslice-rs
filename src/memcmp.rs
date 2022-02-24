@@ -1,7 +1,6 @@
 use std::slice;
 
 #[allow(dead_code)]
-#[inline]
 #[multiversion::multiversion]
 #[clone(target = "[x86|x86_64]+avx2")]
 #[clone(target = "wasm32+simd128")]
@@ -11,7 +10,6 @@ pub unsafe fn generic(left: *const u8, right: *const u8, n: usize) -> bool {
 }
 
 #[allow(dead_code)]
-#[inline]
 #[multiversion::multiversion]
 #[clone(target = "[x86|x86_64]+avx2")]
 #[clone(target = "wasm32+simd128")]

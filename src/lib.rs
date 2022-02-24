@@ -191,7 +191,6 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
 
     fn position(&self) -> usize;
 
-    #[inline]
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
     #[clone(target = "wasm32+simd128")]
@@ -248,7 +247,6 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
         false
     }
 
-    #[inline]
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
     #[clone(target = "wasm32+simd128")]
