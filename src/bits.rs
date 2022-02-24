@@ -1,5 +1,4 @@
 #[allow(dead_code)]
-#[inline]
 #[multiversion::multiversion]
 #[clone(target = "[x86|x86_64]+avx2")]
 #[clone(target = "wasm32+simd128")]
