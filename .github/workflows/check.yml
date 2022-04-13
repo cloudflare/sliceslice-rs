@@ -96,6 +96,42 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
+          args: --target wasm32-wasi --workspace --all-targets
+      - name: Run Clippy linter
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target wasm32-wasi --workspace --all-targets -- -D warnings
+      - name: Install cargo-wasi
+        uses: actions-rs/cargo@v1
+        with:
+          command: install
+          args: cargo-wasi
+      - name: Install wasmtime
+        run: |
+          curl https://wasmtime.dev/install.sh -sSf | bash
+          echo "$HOME/.wasmtime/bin" >> $GITHUB_PATH
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: wasi
+          args: test --workspace
+  wasm32-nightly:
+    name: wasm32 nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: clippy
+          target: wasm32-wasi
+      - name: Build all targets
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
           args: --target wasm32-wasi --workspace --all-targets --all-features
       - name: Run Clippy linter
         uses: actions-rs/cargo@v1
