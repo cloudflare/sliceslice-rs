@@ -19,3 +19,6 @@ cfg-if = "1"
 
 [profile.release]
 debug = true
+
+[features]
+stdsimd = []

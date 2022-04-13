@@ -28,8 +28,17 @@ fn search(haystack: &str, needle: &str) {
             use sliceslice::aarch64::NeonSearcher;
             let searcher = unsafe { NeonSearcher::new(needle) };
             assert_eq!(unsafe { searcher.search_in(haystack) }, result);
-        } else {
+        } else if #[cfg(not(feature = "stdsimd"))] {
             compile_error!("Unsupported architecture");
+        }
+    }
+
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "stdsimd")] {
+            use sliceslice::stdsimd::StdSimdSearcher;
+
+            let searcher = StdSimdSearcher::new(needle);
+            assert_eq!(searcher.search_in(haystack), result, "{:?} in {:?} should be {}", needle, haystack, result);
         }
     }
 }
