@@ -58,8 +58,8 @@ impl Vector for __m16i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        _mm_movemask_epi8(a.0) & 0x3
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        std::mem::transmute(_mm_movemask_epi8(a.0) & 0x3)
     }
 }
 
@@ -105,8 +105,8 @@ impl Vector for __m32i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        _mm_movemask_epi8(a.0) & 0xF
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        std::mem::transmute(_mm_movemask_epi8(a.0) & 0xF)
     }
 }
 
@@ -152,8 +152,8 @@ impl Vector for __m64i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        _mm_movemask_epi8(a.0) & 0xFF
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        std::mem::transmute(_mm_movemask_epi8(a.0) & 0xFF)
     }
 }
 
@@ -194,8 +194,8 @@ impl Vector for __m128i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        _mm_movemask_epi8(a)
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        std::mem::transmute(_mm_movemask_epi8(a))
     }
 }
 
@@ -229,8 +229,8 @@ impl Vector for __m256i {
 
     #[inline]
     #[target_feature(enable = "avx2")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        _mm256_movemask_epi8(a)
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        std::mem::transmute(_mm256_movemask_epi8(a))
     }
 }
 
