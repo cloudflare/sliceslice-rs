@@ -1,3 +1,5 @@
+#![allow(clippy::missing_safety_doc)]
+
 use crate::{Needle, NeedleWithSize, Searcher, Vector, VectorHash};
 
 #[cfg(target_arch = "aarch64")]

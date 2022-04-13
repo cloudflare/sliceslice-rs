@@ -1,14 +1,45 @@
 name: Check
 on: push
 jobs:
-  x86_64:
-    name: x86_64 tests
+  x86_64-stable:
+    name: x86_64 stable
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
+          components: clippy, rustfmt
+      - name: Run rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Build all targets
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --workspace --all-targets
+      - name: Run Clippy linter
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace --all-targets -- -D warnings
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
+  x86_64-nightly:
+    name: x86_64 nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
           components: clippy, rustfmt
       - name: Run rustfmt
         uses: actions-rs/cargo@v1
@@ -30,6 +61,11 @@ jobs:
         with:
           command: test
           args: --workspace --all-features
+  x86_64-sanitizer:
+    name: x86_64 sanitizer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
       - name: Install nightly toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -45,8 +81,8 @@ jobs:
         with:
           command: test
           args: --workspace --all-features --target x86_64-unknown-linux-gnu -Zbuild-std
-  wasm32:
-    name: wasm32 tests
+  wasm32-stable:
+    name: wasm32 stable
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -80,6 +116,34 @@ jobs:
         with:
           command: wasi
           args: test --workspace --all-features
+  aarch64-nightly:
+    name: aarch64 nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install cross-compilation toolchain
+        run: |
+          sudo apt update
+          sudo apt install gcc-aarch64-linux-gnu
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: clippy, rustfmt
+          target: aarch64-unknown-linux-gnu
+      - name: Build all targets
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target aarch64-unknown-linux-gnu --workspace --all-targets --all-features
+        env:
+          RUSTFLAGS: -C linker=aarch64-linux-gnu-gcc
+      - name: Run Clippy linter
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target aarch64-unknown-linux-gnu --workspace --all-targets  --all-features -- -D warnings
   bench:
     name: Benchmarks
     runs-on: ubuntu-latest
