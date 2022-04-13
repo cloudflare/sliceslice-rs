@@ -6,7 +6,11 @@
 
 #![warn(missing_docs)]
 // Will be stabilized in 1.61.0 with https://github.com/rust-lang/rust/pull/90621
-#![cfg_attr(target_arch = "aarch64", feature(aarch64_target_feature))]
+#![cfg_attr(
+    target_arch = "aarch64",
+    allow(stable_features),
+    feature(aarch64_target_feature)
+)]
 
 /// Substring search implementations using aarch64 architecture features.
 #[cfg(target_arch = "aarch64")]
