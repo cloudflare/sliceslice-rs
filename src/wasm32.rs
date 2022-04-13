@@ -34,8 +34,8 @@ impl Vector for v128 {
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        u8x16_bitmask(a) as i32
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        u8x16_bitmask(a).into()
     }
 }
 
@@ -74,8 +74,8 @@ impl Vector for v64 {
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        (u8x16_bitmask(a.0) & 0xFF) as i32
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        (u8x16_bitmask(a.0) & 0xFF).into()
     }
 }
 
@@ -120,8 +120,8 @@ impl Vector for v32 {
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        (u8x16_bitmask(a.0) & 0xF) as i32
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        (u8x16_bitmask(a.0) & 0xF).into()
     }
 }
 
@@ -166,8 +166,8 @@ impl Vector for v16 {
 
     #[inline]
     #[target_feature(enable = "simd128")]
-    unsafe fn to_bitmask(a: Self) -> i32 {
-        (u8x16_bitmask(a.0) & 0x3) as i32
+    unsafe fn to_bitmask(a: Self) -> u32 {
+        (u8x16_bitmask(a.0) & 0x3).into()
     }
 }
 

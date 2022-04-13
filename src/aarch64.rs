@@ -49,7 +49,7 @@ impl Vector for uint8x16_t {
     }
 
     #[inline]
-    unsafe fn to_bitmask(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> u32 {
         let extended = vreinterpretq_u8_s8(vshrq_n_s8(vreinterpretq_s8_u8(a), 7));
         let masked = vandq_u8(vld1q_u8(MD.as_ptr()), extended);
         let maskedhi = vextq_u8(masked, masked, 8);
@@ -82,7 +82,7 @@ impl Vector for uint8x8_t {
     }
 
     #[inline]
-    unsafe fn to_bitmask(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> u32 {
         vaddv_u8(vand_u8(
             vreinterpret_u8_s8(vshr_n_s8(vreinterpret_s8_u8(a), 7)),
             vld1_u8(MD.as_ptr()),
@@ -121,7 +121,7 @@ impl Vector for uint8x4_t {
     }
 
     #[inline]
-    unsafe fn to_bitmask(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> u32 {
         uint8x8_t::to_bitmask(a.0) & 0xF
     }
 }
@@ -162,7 +162,7 @@ impl Vector for uint8x2_t {
     }
 
     #[inline]
-    unsafe fn to_bitmask(a: Self) -> i32 {
+    unsafe fn to_bitmask(a: Self) -> u32 {
         uint8x8_t::to_bitmask(a.0) & 0x3
     }
 }

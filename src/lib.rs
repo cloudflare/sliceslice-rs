@@ -166,7 +166,7 @@ trait Vector: Copy {
 
     unsafe fn bitwise_and(a: Self::Mask, b: Self::Mask) -> Self::Mask;
 
-    unsafe fn to_bitmask(a: Self::Mask) -> i32;
+    unsafe fn to_bitmask(a: Self::Mask) -> u32;
 }
 
 /// Hash of the first and "last" bytes in the needle for use with the SIMD
@@ -209,10 +209,9 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[clone(target = "aarch64+neon")]
     unsafe fn vector_search_in_chunk<V: Vector>(
         &self,
-        haystack: &[u8],
         hash: &VectorHash<V>,
         start: *const u8,
-        mask: i32,
+        mask: u32,
     ) -> bool {
         let first = V::load(start);
         let last = V::load(start.add(self.position()));
@@ -221,10 +220,9 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
         let eq_last = V::lanes_eq(hash.last, last);
 
         let eq = V::bitwise_and(eq_first, eq_last);
-        let mut eq = (V::to_bitmask(eq) & mask) as u32;
+        let mut eq = V::to_bitmask(eq) & mask;
 
-        let start = start as usize - haystack.as_ptr() as usize;
-        let chunk = haystack.as_ptr().add(start + 1);
+        let chunk = start.add(1);
         let needle = self.needle().as_bytes().as_ptr().add(1);
 
         while eq != 0 {
@@ -273,7 +271,7 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
 
         let mut chunks = haystack[..end].chunks_exact(V::LANES);
         for chunk in &mut chunks {
-            if dispatch!(self.vector_search_in_chunk(haystack, hash, chunk.as_ptr(), -1)) {
+            if dispatch!(self.vector_search_in_chunk(hash, chunk.as_ptr(), u32::MAX)) {
                 return true;
             }
         }
@@ -281,9 +279,9 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
         let remainder = chunks.remainder().len();
         if remainder > 0 {
             let start = haystack.as_ptr().add(end - V::LANES);
-            let mask = -1 << (V::LANES - remainder);
+            let mask = u32::MAX << (V::LANES - remainder);
 
-            if dispatch!(self.vector_search_in_chunk(haystack, hash, start, mask)) {
+            if dispatch!(self.vector_search_in_chunk(hash, start, mask)) {
                 return true;
             }
         }

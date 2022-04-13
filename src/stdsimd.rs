@@ -30,7 +30,7 @@ where
 
     #[inline]
     unsafe fn splat(a: u8) -> Self {
-        Simd::splat(a as u8)
+        Simd::splat(a)
     }
 
     #[inline]
@@ -49,8 +49,8 @@ where
     }
 
     #[inline]
-    unsafe fn to_bitmask(a: Self::Mask) -> i32 {
-        std::mem::transmute(a.to_fixed_bitmask())
+    unsafe fn to_bitmask(a: Self::Mask) -> u32 {
+        a.to_fixed_bitmask()
     }
 }
 
