@@ -26,6 +26,7 @@ static MD: [u8; 16] = [
 
 impl Vector for uint8x16_t {
     const LANES: usize = 16;
+    type Mask = Self;
 
     #[inline]
     unsafe fn splat(a: u8) -> Self {
@@ -58,6 +59,7 @@ impl Vector for uint8x16_t {
 
 impl Vector for uint8x8_t {
     const LANES: usize = 8;
+    type Mask = Self;
 
     #[inline]
     unsafe fn splat(a: u8) -> Self {
@@ -96,6 +98,7 @@ struct uint8x4_t(uint8x8_t);
 
 impl Vector for uint8x4_t {
     const LANES: usize = 4;
+    type Mask = Self;
 
     #[inline]
     unsafe fn splat(a: u8) -> Self {
@@ -136,6 +139,7 @@ struct uint8x2_t(uint8x8_t);
 
 impl Vector for uint8x2_t {
     const LANES: usize = 2;
+    type Mask = Self;
 
     #[inline]
     unsafe fn splat(a: u8) -> Self {

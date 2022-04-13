@@ -11,10 +11,15 @@
     allow(stable_features),
     feature(aarch64_target_feature)
 )]
+#![cfg_attr(feature = "stdsimd", feature(portable_simd))]
 
 /// Substring search implementations using aarch64 architecture features.
 #[cfg(target_arch = "aarch64")]
 pub mod aarch64;
+
+/// Substring search implementations using generic stdsimd features.
+#[cfg(feature = "stdsimd")]
+pub mod stdsimd;
 
 /// Substring search implementations using x86 architecture features.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
@@ -151,21 +156,24 @@ impl MemchrSearcher {
 trait Vector: Copy {
     const LANES: usize;
 
+    type Mask;
+
     unsafe fn splat(a: u8) -> Self;
 
     unsafe fn load(a: *const u8) -> Self;
 
-    unsafe fn lanes_eq(a: Self, b: Self) -> Self;
+    unsafe fn lanes_eq(a: Self, b: Self) -> Self::Mask;
 
-    unsafe fn bitwise_and(a: Self, b: Self) -> Self;
+    unsafe fn bitwise_and(a: Self::Mask, b: Self::Mask) -> Self::Mask;
 
-    unsafe fn to_bitmask(a: Self) -> i32;
+    unsafe fn to_bitmask(a: Self::Mask) -> i32;
 }
 
 /// Hash of the first and "last" bytes in the needle for use with the SIMD
 /// algorithm implemented by `Avx2Searcher::vector_search_in`. As explained, any
 /// byte can be chosen to represent the "last" byte of the hash to prevent
 /// worst-case attacks.
+#[derive(Debug)]
 struct VectorHash<V: Vector> {
     first: V,
     last: V,
@@ -174,8 +182,8 @@ struct VectorHash<V: Vector> {
 impl<V: Vector> VectorHash<V> {
     unsafe fn new(first: u8, last: u8) -> Self {
         Self {
-            first: Vector::splat(first),
-            last: Vector::splat(last),
+            first: V::splat(first),
+            last: V::splat(last),
         }
     }
 }
@@ -206,14 +214,14 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
         start: *const u8,
         mask: i32,
     ) -> bool {
-        let first = Vector::load(start);
-        let last = Vector::load(start.add(self.position()));
+        let first = V::load(start);
+        let last = V::load(start.add(self.position()));
 
-        let eq_first = Vector::lanes_eq(hash.first, first);
-        let eq_last = Vector::lanes_eq(hash.last, last);
+        let eq_first = V::lanes_eq(hash.first, first);
+        let eq_last = V::lanes_eq(hash.last, last);
 
-        let eq = Vector::bitwise_and(eq_first, eq_last);
-        let mut eq = (Vector::to_bitmask(eq) & mask) as u32;
+        let eq = V::bitwise_and(eq_first, eq_last);
+        let mut eq = (V::to_bitmask(eq) & mask) as u32;
 
         let start = start as usize - haystack.as_ptr() as usize;
         let chunk = haystack.as_ptr().add(start + 1);
@@ -379,8 +387,17 @@ mod tests {
 
                     let searcher = unsafe { NeonSearcher::with_position(needle, position) };
                     assert_eq!(unsafe { searcher.search_in(haystack) }, result);
-                } else {
+                } else if #[cfg(not(feature = "stdsimd"))] {
                     compile_error!("Unsupported architecture");
+                }
+            }
+
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "stdsimd")] {
+                    use crate::stdsimd::StdSimdSearcher;
+
+                    let searcher = StdSimdSearcher::with_position(needle, position);
+                    assert_eq!(searcher.search_in(haystack), result);
                 }
             }
         }

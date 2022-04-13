@@ -30,6 +30,7 @@ struct __m16i(__m128i);
 
 impl Vector for __m16i {
     const LANES: usize = 2;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "avx2")]
@@ -76,6 +77,7 @@ struct __m32i(__m128i);
 
 impl Vector for __m32i {
     const LANES: usize = 4;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "avx2")]
@@ -122,6 +124,7 @@ struct __m64i(__m128i);
 
 impl Vector for __m64i {
     const LANES: usize = 8;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "avx2")]
@@ -163,6 +166,7 @@ impl From<__m128i> for __m64i {
 
 impl Vector for __m128i {
     const LANES: usize = 16;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "avx2")]
@@ -197,6 +201,7 @@ impl Vector for __m128i {
 
 impl Vector for __m256i {
     const LANES: usize = 32;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "avx2")]

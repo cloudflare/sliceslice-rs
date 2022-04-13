@@ -6,6 +6,7 @@ use std::arch::wasm32::*;
 
 impl Vector for v128 {
     const LANES: usize = 16;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "simd128")]
@@ -45,6 +46,7 @@ struct v64(v128);
 
 impl Vector for v64 {
     const LANES: usize = 8;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "simd128")]
@@ -90,6 +92,7 @@ struct v32(v128);
 
 impl Vector for v32 {
     const LANES: usize = 4;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "simd128")]
@@ -135,6 +138,7 @@ struct v16(v128);
 
 impl Vector for v16 {
     const LANES: usize = 2;
+    type Mask = Self;
 
     #[inline]
     #[target_feature(enable = "simd128")]
