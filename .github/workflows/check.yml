@@ -180,8 +180,8 @@ jobs:
         with:
           command: clippy
           args: --target aarch64-unknown-linux-gnu --workspace --all-targets  --all-features -- -D warnings
-  bench:
-    name: Benchmarks
+  bench-stable:
+    name: Benchmarks stable
     runs-on: ubuntu-latest
     env:
       CXX: clang++
@@ -193,6 +193,37 @@ jobs:
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
+          components: clippy, rustfmt
+      - name: Run rustfmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --manifest-path bench/Cargo.toml --all -- --check
+      - name: Build all targets
+        uses: actions-rs/cargo@v1
+        with:
+          command: bench
+          args: --manifest-path bench/Cargo.toml --workspace --no-run --all-targets
+      - name: Run Clippy linter
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path bench/Cargo.toml --workspace --all-targets -- -D warnings
+  bench-nightly:
+    name: Benchmarks nightly
+    runs-on: ubuntu-latest
+    env:
+      CXX: clang++
+      LLVM_CONFIG_PATH: /usr/lib/llvm-12/bin/llvm-config
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
           components: clippy, rustfmt
       - name: Run rustfmt
         uses: actions-rs/cargo@v1
