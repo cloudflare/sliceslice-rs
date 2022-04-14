@@ -75,7 +75,7 @@ jobs:
       - name: Run tests with address sanitizer
         uses: actions-rs/cargo@v1
         env:
-          ASAN_SYMBOLIZER_PATH: /usr/lib/llvm-9/bin/llvm-symbolizer
+          ASAN_SYMBOLIZER_PATH: /usr/lib/llvm-12/bin/llvm-symbolizer
           RUSTFLAGS: -Zsanitizer=address
           RUSTDOCFLAGS: -Zsanitizer=address
         with:
@@ -185,7 +185,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CXX: clang++
-      LLVM_CONFIG_PATH: /usr/lib/llvm-9/bin/llvm-config
+      LLVM_CONFIG_PATH: /usr/lib/llvm-12/bin/llvm-config
     steps:
       - uses: actions/checkout@v3
         with:
