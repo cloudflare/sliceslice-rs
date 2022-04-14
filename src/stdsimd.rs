@@ -147,7 +147,6 @@ impl<N: Needle> StdSimdSearcher<N> {
             unreachable!();
         } else if end < Simd4::LANES {
             let hash = from_hash::<32, 2>(&self.simd32_hash);
-            println!("hash: {:?}", hash);
             unsafe { self.vector_search_in_default_version(haystack, end, &hash) }
         } else if end < Simd8::LANES {
             let hash = from_hash::<32, 4>(&self.simd32_hash);
