@@ -26,3 +26,6 @@ harness = false
 [profile.bench]
 codegen-units = 1
 lto = true
+
+[features]
+stdsimd = ["sliceslice/stdsimd"]

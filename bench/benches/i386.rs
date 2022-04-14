@@ -83,7 +83,7 @@ fn search_short_haystack<M: Measurement>(c: &mut Criterion<M>) {
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
-        use sliceslice::x86::DynamicAvx2Searcher;
+        use sliceslice::x86::{Avx2Searcher, DynamicAvx2Searcher};
 
         #[cfg(feature = "sse4-strstr")]
         group.bench_function("sse4_strstr::avx2_strstr_v2", |b| {
@@ -93,6 +93,21 @@ fn search_short_haystack<M: Measurement>(c: &mut Criterion<M>) {
                         black_box(unsafe {
                             sse4_strstr::avx2_strstr_v2(haystack.as_bytes(), needle.as_bytes())
                         });
+                    }
+                }
+            });
+        });
+
+        group.bench_function("Avx2Searcher::search_in", |b| {
+            let searchers = needles
+                .iter()
+                .map(|&needle| unsafe { Avx2Searcher::new(needle.as_bytes()) })
+                .collect::<Vec<_>>();
+
+            b.iter(|| {
+                for (i, searcher) in searchers.iter().enumerate() {
+                    for haystack in &needles[i..] {
+                        black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
                     }
                 }
             });
@@ -108,6 +123,26 @@ fn search_short_haystack<M: Measurement>(c: &mut Criterion<M>) {
                 for (i, searcher) in searchers.iter().enumerate() {
                     for haystack in &needles[i..] {
                         black_box(unsafe { searcher.search_in(haystack.as_bytes()) });
+                    }
+                }
+            });
+        });
+    }
+
+    #[cfg(feature = "stdsimd")]
+    {
+        use sliceslice::stdsimd::StdSimdSearcher;
+
+        group.bench_function("StdSimdSearcher::search_in", |b| {
+            let searchers = needles
+                .iter()
+                .map(|&needle| StdSimdSearcher::new(needle.as_bytes()))
+                .collect::<Vec<_>>();
+
+            b.iter(|| {
+                for (i, searcher) in searchers.iter().enumerate() {
+                    for haystack in &needles[i..] {
+                        black_box(searcher.search_in(haystack.as_bytes()));
                     }
                 }
             });
@@ -182,13 +217,26 @@ fn search_haystack<M: Measurement>(
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     {
-        use sliceslice::x86::DynamicAvx2Searcher;
+        use sliceslice::x86::{Avx2Searcher, DynamicAvx2Searcher};
 
         #[cfg(feature = "sse4-strstr")]
         group.bench_function("sse4_strstr::avx2_strstr_v2", |b| {
             b.iter(|| {
                 for needle in &needles {
                     black_box(unsafe { sse4_strstr::avx2_strstr_v2(haystack, needle.as_bytes()) });
+                }
+            });
+        });
+
+        group.bench_function("Avx2Searcher::search_in", |b| {
+            let searchers = needles
+                .iter()
+                .map(|needle| unsafe { Avx2Searcher::new(needle.as_bytes()) })
+                .collect::<Vec<_>>();
+
+            b.iter(|| {
+                for searcher in &searchers {
+                    black_box(unsafe { searcher.search_in(haystack) });
                 }
             });
         });
@@ -202,6 +250,24 @@ fn search_haystack<M: Measurement>(
             b.iter(|| {
                 for searcher in &searchers {
                     black_box(unsafe { searcher.search_in(haystack) });
+                }
+            });
+        });
+    }
+
+    #[cfg(feature = "stdsimd")]
+    {
+        use sliceslice::stdsimd::StdSimdSearcher;
+
+        group.bench_function("StdSimdSearcher::search_in", |b| {
+            let searchers = needles
+                .iter()
+                .map(|needle| StdSimdSearcher::new(needle.as_bytes()))
+                .collect::<Vec<_>>();
+
+            b.iter(|| {
+                for searcher in &searchers {
+                    black_box(searcher.search_in(haystack));
                 }
             });
         });
