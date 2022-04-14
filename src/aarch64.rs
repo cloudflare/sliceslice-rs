@@ -285,3 +285,20 @@ impl<N: Needle> Searcher<N> for NeonSearcher<N> {
         self.position
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::NeonSearcher;
+
+    impl crate::tests::TestSearcher for NeonSearcher<&[u8]> {
+        fn with_position(needle: &'static [u8], position: usize) -> NeonSearcher<&[u8]> {
+            unsafe { NeonSearcher::with_position(needle, position) }
+        }
+
+        fn search_in(&self, haystack: &[u8]) -> bool {
+            unsafe { NeonSearcher::search_in(self, haystack) }
+        }
+    }
+
+    crate::generate_tests!(neon_searcher, NeonSearcher);
+}

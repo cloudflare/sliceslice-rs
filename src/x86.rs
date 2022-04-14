@@ -583,4 +583,28 @@ mod tests {
         assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 16]>>(), 160);
         assert_eq!(size_of::<DynamicAvx2Searcher::<Box<[u8]>>>(), 160);
     }
+
+    impl crate::tests::TestSearcher for Avx2Searcher<&[u8]> {
+        fn with_position(needle: &'static [u8], position: usize) -> Avx2Searcher<&[u8]> {
+            unsafe { Avx2Searcher::with_position(needle, position) }
+        }
+
+        fn search_in(&self, haystack: &[u8]) -> bool {
+            unsafe { Avx2Searcher::search_in(self, haystack) }
+        }
+    }
+
+    crate::generate_tests!(avx2_searcher, Avx2Searcher);
+
+    impl crate::tests::TestSearcher for DynamicAvx2Searcher<&[u8]> {
+        fn with_position(needle: &'static [u8], position: usize) -> DynamicAvx2Searcher<&[u8]> {
+            unsafe { DynamicAvx2Searcher::with_position(needle, position) }
+        }
+
+        fn search_in(&self, haystack: &[u8]) -> bool {
+            unsafe { DynamicAvx2Searcher::search_in(self, haystack) }
+        }
+    }
+
+    crate::generate_tests!(dynamic_avx2_searcher, DynamicAvx2Searcher);
 }

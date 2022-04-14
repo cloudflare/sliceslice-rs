@@ -167,3 +167,20 @@ impl<N: Needle> StdSimdSearcher<N> {
         self.inlined_search_in(haystack)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::StdSimdSearcher;
+
+    impl crate::tests::TestSearcher for StdSimdSearcher<&[u8]> {
+        fn with_position(needle: &'static [u8], position: usize) -> StdSimdSearcher<&[u8]> {
+            StdSimdSearcher::with_position(needle, position)
+        }
+
+        fn search_in(&self, haystack: &[u8]) -> bool {
+            StdSimdSearcher::search_in(self, haystack)
+        }
+    }
+
+    crate::generate_tests!(std_simd_searcher, StdSimdSearcher);
+}
