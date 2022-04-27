@@ -7,14 +7,14 @@
 #![warn(missing_docs)]
 // Will be stabilized in 1.61.0 with https://github.com/rust-lang/rust/pull/90621
 #![cfg_attr(
-    target_arch = "aarch64",
+    all(target_arch = "aarch64", feature = "aarch64"),
     allow(stable_features),
     feature(aarch64_target_feature)
 )]
 #![cfg_attr(feature = "stdsimd", feature(portable_simd))]
 
 /// Substring search implementations using aarch64 architecture features.
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", feature = "aarch64"))]
 pub mod aarch64;
 
 /// Substring search implementations using generic stdsimd features.
@@ -206,7 +206,10 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
     #[clone(target = "wasm32+simd128")]
-    #[clone(target = "aarch64+neon")]
+    #[cfg_attr(
+        all(target_arch = "aarch64", feature = "aarch64"),
+        clone(target = "aarch64+neon")
+    )]
     unsafe fn vector_search_in_chunk<V: Vector>(
         &self,
         hash: &VectorHash<V>,
@@ -260,7 +263,10 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
     #[clone(target = "wasm32+simd128")]
-    #[clone(target = "aarch64+neon")]
+    #[cfg_attr(
+        all(target_arch = "aarch64", feature = "aarch64"),
+        clone(target = "aarch64+neon")
+    )]
     unsafe fn vector_search_in<V: Vector>(
         &self,
         haystack: &[u8],
