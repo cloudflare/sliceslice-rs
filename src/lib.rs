@@ -5,12 +5,6 @@
 //! crate](https://github.com/BurntSushi/aho-corasick).
 
 #![warn(missing_docs)]
-// Will be stabilized in 1.61.0 with https://github.com/rust-lang/rust/pull/90621
-#![cfg_attr(
-    all(target_arch = "aarch64", feature = "aarch64"),
-    allow(stable_features),
-    feature(aarch64_target_feature)
-)]
 #![cfg_attr(feature = "stdsimd", feature(portable_simd))]
 
 /// Substring search implementations using aarch64 architecture features.
