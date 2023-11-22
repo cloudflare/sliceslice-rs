@@ -40,7 +40,7 @@ where
 
     #[inline]
     unsafe fn lanes_eq(a: Self, b: Self) -> Self::Mask {
-        a.lanes_eq(b)
+        a.simd_eq(b)
     }
 
     #[inline]
