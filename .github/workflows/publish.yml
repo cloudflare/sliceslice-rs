@@ -7,19 +7,15 @@ jobs:
     name: Cargo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+        id: toolchain
+        uses: dtolnay/rust-toolchain@stable
       - name: Check version number
         run: ./scripts/check-version.sh
       - name: Login to registry
-        uses: actions-rs/cargo@v1
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        with:
-          command: login
-          args: "$CARGO_REGISTRY_TOKEN"
+        run: cargo +${{steps.toolchain.outputs.name}} login "$CARGO_REGISTRY_TOKEN"
       - name: Publish crate
-        uses: actions-rs/cargo@v1
-        with:
-          command: publish
+        run: cargo +${{steps.toolchain.outputs.name}} publish
