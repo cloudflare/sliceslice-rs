@@ -21,7 +21,7 @@ pub fn search_in_slice(backend: &str, needle: &[u8], haystack: &[u8]) -> bool {
         let searcher = unsafe { DynamicAvx2Searcher::new(needle) };
         return unsafe { searcher.search_in(haystack) };
     }
-    #[cfg(any(target_arch = "aarch64"))]
+    #[cfg(target_arch = "aarch64")]
     if "neon".eq_ignore_ascii_case(backend) {
         let searcher = unsafe { NeonSearcher::new(needle) };
         return unsafe { searcher.search_in(haystack) };
@@ -31,7 +31,7 @@ pub fn search_in_slice(backend: &str, needle: &[u8], haystack: &[u8]) -> bool {
         let searcher = StdSimdSearcher::new(needle);
         return searcher.search_in(haystack);
     }
-    #[cfg(any(target_arch = "wasm32"))]
+    #[cfg(target_arch = "wasm32")]
     if "wasm32".eq_ignore_ascii_case(backend) {
         let searcher = unsafe { Wasm32Searcher::new(needle) };
         return unsafe { searcher.search_in(haystack) };
