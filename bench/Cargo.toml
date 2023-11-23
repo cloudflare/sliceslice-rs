@@ -5,7 +5,7 @@ edition = "2018"
 publish = false
 
 [dependencies]
-criterion = "0.3"
+criterion = "0.5"
 memchr = "2.4"
 memmem = "0.1"
 sliceslice = { path = ".." }
@@ -13,7 +13,8 @@ sse4-strstr = { path = "sse4-strstr", optional = true }
 twoway = "0.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-criterion-linux-perf = "0.1"
+criterion-perf-events = "0.4.0"
+perfcnt = "0.8"
 
 [[bench]]
 name = "i386"

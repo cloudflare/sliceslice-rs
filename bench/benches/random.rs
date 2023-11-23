@@ -4,8 +4,10 @@ use criterion::{
     BenchmarkId, Criterion,
 };
 #[cfg(target_os = "linux")]
-use criterion_linux_perf::{PerfMeasurement, PerfMode};
+use criterion_perf_events::Perf;
 use memmem::{Searcher, TwoWaySearcher};
+#[cfg(target_os = "linux")]
+use perfcnt::linux::{HardwareEventType, PerfCounterBuilderLinux};
 
 fn search<M: Measurement>(c: &mut Criterion<M>) {
     let haystack = include_str!("../../data/haystack");
@@ -105,7 +107,7 @@ criterion_group!(
 #[cfg(target_os = "linux")]
 criterion_group!(
     name = random_perf_instructions;
-    config = Criterion::default().with_measurement(PerfMeasurement::new(PerfMode::Instructions));
+    config = Criterion::default().with_measurement(Perf::new(PerfCounterBuilderLinux::from_hardware_event(HardwareEventType::Instructions)));
     targets = search
 );
 
