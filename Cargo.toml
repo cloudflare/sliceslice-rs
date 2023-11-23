@@ -22,5 +22,4 @@ memmap2 = "0.5"
 debug = true
 
 [features]
-aarch64 = []
 stdsimd = []
