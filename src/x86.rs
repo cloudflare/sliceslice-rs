@@ -441,7 +441,7 @@ pub enum DynamicAvx2Searcher<N: Needle> {
 
 macro_rules! array {
     ($c:ident, $S:literal) => [seq!(N in 0..$S {
-            [ #( $c #N, )* ]
+            [ #( $c~N, )* ]
     })];
 }
 
