@@ -8,7 +8,7 @@
 #![cfg_attr(feature = "stdsimd", feature(portable_simd))]
 
 /// Substring search implementations using aarch64 architecture features.
-#[cfg(all(target_arch = "aarch64", feature = "aarch64"))]
+#[cfg(target_arch = "aarch64")]
 pub mod aarch64;
 
 /// Substring search implementations using generic stdsimd features.
@@ -200,10 +200,7 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
     #[clone(target = "wasm32+simd128")]
-    #[cfg_attr(
-        all(target_arch = "aarch64", feature = "aarch64"),
-        clone(target = "aarch64+neon")
-    )]
+    #[clone(target = "aarch64+neon")]
     unsafe fn vector_search_in_chunk<V: Vector>(
         &self,
         hash: &VectorHash<V>,
@@ -257,10 +254,7 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
     #[multiversion::multiversion]
     #[clone(target = "[x86|x86_64]+avx2")]
     #[clone(target = "wasm32+simd128")]
-    #[cfg_attr(
-        all(target_arch = "aarch64", feature = "aarch64"),
-        clone(target = "aarch64+neon")
-    )]
+    #[clone(target = "aarch64+neon")]
     unsafe fn vector_search_in<V: Vector>(
         &self,
         haystack: &[u8],
