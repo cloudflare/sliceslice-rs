@@ -4,8 +4,10 @@ use criterion::{
     Criterion,
 };
 #[cfg(target_os = "linux")]
-use criterion_linux_perf::{PerfMeasurement, PerfMode};
+use criterion_perf_events::Perf;
 use memmem::{Searcher, TwoWaySearcher};
+#[cfg(target_os = "linux")]
+use perfcnt::linux::{HardwareEventType, PerfCounterBuilderLinux};
 use std::{
     fs::File,
     io::{BufRead, BufReader},
@@ -295,7 +297,7 @@ criterion_group!(
 #[cfg(target_os = "linux")]
 criterion_group!(
     name = i386_perf_instructions;
-    config = Criterion::default().with_measurement(PerfMeasurement::new(PerfMode::Instructions));
+    config = Criterion::default().with_measurement(Perf::new(PerfCounterBuilderLinux::from_hardware_event(HardwareEventType::Instructions)));
     targets = search_short_haystack, search_long_haystack, search_random_haystack
 );
 
