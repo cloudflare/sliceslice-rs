@@ -2,28 +2,20 @@
 
 use crate::{Needle, NeedleWithSize, Searcher, Vector, VectorHash};
 #[cfg(feature = "stdsimd")]
-use std::simd::*;
+use std::simd::{cmp::SimdPartialEq, *};
 
-trait ToFixedBitMask: Sized {
-    fn to_fixed_bitmask(self) -> u32;
-}
+trait SupportedMaskLateCount {}
 
-impl<const LANES: usize> ToFixedBitMask for Mask<i8, LANES>
-where
-    LaneCount<LANES>: SupportedLaneCount,
-    Self: ToBitMask,
-    <Self as ToBitMask>::BitMask: Into<u32>,
-{
-    #[inline]
-    fn to_fixed_bitmask(self) -> u32 {
-        self.to_bitmask().into()
-    }
-}
+impl SupportedMaskLateCount for LaneCount<2> {}
+impl SupportedMaskLateCount for LaneCount<4> {}
+impl SupportedMaskLateCount for LaneCount<8> {}
+impl SupportedMaskLateCount for LaneCount<16> {}
+impl SupportedMaskLateCount for LaneCount<32> {}
 
 impl<const LANES: usize> Vector for Simd<u8, LANES>
 where
     LaneCount<LANES>: SupportedLaneCount,
-    Mask<i8, LANES>: ToFixedBitMask,
+    LaneCount<LANES>: SupportedMaskLateCount,
 {
     const LANES: usize = LANES;
     type Mask = Mask<i8, LANES>;
@@ -50,7 +42,7 @@ where
 
     #[inline]
     unsafe fn to_bitmask(a: Self::Mask) -> u32 {
-        a.to_fixed_bitmask()
+        a.to_bitmask() as u32
     }
 }
 
@@ -65,9 +57,9 @@ fn from_hash<const N1: usize, const N2: usize>(
 ) -> VectorHash<Simd<u8, N2>>
 where
     LaneCount<N1>: SupportedLaneCount,
-    Mask<i8, N1>: ToFixedBitMask,
+    LaneCount<N1>: SupportedMaskLateCount,
     LaneCount<N2>: SupportedLaneCount,
-    Mask<i8, N2>: ToFixedBitMask,
+    LaneCount<N2>: SupportedMaskLateCount,
 {
     VectorHash {
         first: Simd::splat(hash.first.as_array()[0]),
