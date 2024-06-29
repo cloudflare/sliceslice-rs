@@ -23,8 +23,6 @@ pub mod x86;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm32;
 
-mod memcmp;
-
 use memchr::memchr;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -186,6 +184,15 @@ impl<T: Vector, V: Vector + From<T>> From<&VectorHash<T>> for VectorHash<V> {
     }
 }
 
+macro_rules! memcmp {
+    ($chunk:ident, $needle:ident, $len:literal) => {
+        std::slice::from_raw_parts($chunk, $len) == std::slice::from_raw_parts($needle, $len)
+    };
+    ($chunk:ident, $needle:ident, $len:ident) => {
+        std::slice::from_raw_parts($chunk, $len) == std::slice::from_raw_parts($needle, $len)
+    };
+}
+
 #[multiversion::multiversion]
 #[clone(target = "[x86|x86_64]+avx2")]
 #[clone(target = "wasm32+simd128")]
@@ -214,23 +221,23 @@ unsafe fn vector_search_in_chunk<N: NeedleWithSize + ?Sized, V: Vector>(
         let chunk = chunk.add(eq.trailing_zeros() as usize);
         let equal = match N::SIZE {
             Some(0) => unreachable!(),
-            Some(1) => dispatch!(memcmp::specialized::<0>(chunk, needle)),
-            Some(2) => dispatch!(memcmp::specialized::<1>(chunk, needle)),
-            Some(3) => dispatch!(memcmp::specialized::<2>(chunk, needle)),
-            Some(4) => dispatch!(memcmp::specialized::<3>(chunk, needle)),
-            Some(5) => dispatch!(memcmp::specialized::<4>(chunk, needle)),
-            Some(6) => dispatch!(memcmp::specialized::<5>(chunk, needle)),
-            Some(7) => dispatch!(memcmp::specialized::<6>(chunk, needle)),
-            Some(8) => dispatch!(memcmp::specialized::<7>(chunk, needle)),
-            Some(9) => dispatch!(memcmp::specialized::<8>(chunk, needle)),
-            Some(10) => dispatch!(memcmp::specialized::<9>(chunk, needle)),
-            Some(11) => dispatch!(memcmp::specialized::<10>(chunk, needle)),
-            Some(12) => dispatch!(memcmp::specialized::<11>(chunk, needle)),
-            Some(13) => dispatch!(memcmp::specialized::<12>(chunk, needle)),
-            Some(14) => dispatch!(memcmp::specialized::<13>(chunk, needle)),
-            Some(15) => dispatch!(memcmp::specialized::<14>(chunk, needle)),
-            Some(16) => dispatch!(memcmp::specialized::<15>(chunk, needle)),
-            _ => dispatch!(memcmp::generic(chunk, needle, size)),
+            Some(1) => memcmp!(chunk, needle, 0),
+            Some(2) => memcmp!(chunk, needle, 1),
+            Some(3) => memcmp!(chunk, needle, 2),
+            Some(4) => memcmp!(chunk, needle, 3),
+            Some(5) => memcmp!(chunk, needle, 4),
+            Some(6) => memcmp!(chunk, needle, 5),
+            Some(7) => memcmp!(chunk, needle, 6),
+            Some(8) => memcmp!(chunk, needle, 7),
+            Some(9) => memcmp!(chunk, needle, 8),
+            Some(10) => memcmp!(chunk, needle, 9),
+            Some(11) => memcmp!(chunk, needle, 10),
+            Some(12) => memcmp!(chunk, needle, 11),
+            Some(13) => memcmp!(chunk, needle, 12),
+            Some(14) => memcmp!(chunk, needle, 13),
+            Some(15) => memcmp!(chunk, needle, 14),
+            Some(16) => memcmp!(chunk, needle, 15),
+            _ => memcmp!(chunk, needle, size),
         };
         if equal {
             return true;
