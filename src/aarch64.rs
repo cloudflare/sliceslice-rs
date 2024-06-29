@@ -227,23 +227,25 @@ impl<N: Needle> NeonSearcher<N> {
     #[inline]
     unsafe fn neon_2_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<uint8x2_t>::from(&self.neon_half_hash);
-        self.vector_search_in_neon_version(haystack, end, &hash)
+        crate::vector_search_in_neon_version(self.needle(), self.position(), haystack, end, &hash)
     }
 
     #[inline]
     unsafe fn neon_4_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<uint8x4_t>::from(&self.neon_half_hash);
-        self.vector_search_in_neon_version(haystack, end, &hash)
+        crate::vector_search_in_neon_version(self.needle(), self.position(), haystack, end, &hash)
     }
 
     #[inline]
     unsafe fn neon_8_search_in(&self, haystack: &[u8], end: usize) -> bool {
-        self.vector_search_in_neon_version(haystack, end, &self.neon_half_hash)
+        let hash = &self.neon_half_hash;
+        crate::vector_search_in_neon_version(self.needle(), self.position(), haystack, end, hash)
     }
 
     #[inline]
     unsafe fn neon_search_in(&self, haystack: &[u8], end: usize) -> bool {
-        self.vector_search_in_neon_version(haystack, end, &self.neon_hash)
+        let hash = &self.neon_hash;
+        crate::vector_search_in_neon_version(self.needle(), self.position(), haystack, end, hash)
     }
 
     /// Inlined version of `search_in` for hot call sites.

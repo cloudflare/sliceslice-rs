@@ -129,28 +129,47 @@ impl<N: Needle> StdSimdSearcher<N> {
     /// Inlined version of `search_in` for hot call sites.
     #[inline]
     pub fn inlined_search_in(&self, haystack: &[u8]) -> bool {
-        if haystack.len() <= self.needle.size() {
-            return haystack == self.needle.as_bytes();
+        let needle = self.needle();
+
+        if haystack.len() <= needle.size() {
+            return haystack == needle.as_bytes();
         }
 
-        let end = haystack.len() - self.needle.size() + 1;
+        let position = self.position();
+        let end = haystack.len() - needle.size() + 1;
 
         if end < Simd2::LANES {
             unreachable!();
         } else if end < Simd4::LANES {
             let hash = from_hash::<32, 2>(&self.simd32_hash);
-            unsafe { self.vector_search_in_default_version(haystack, end, &hash) }
+            unsafe {
+                crate::vector_search_in_default_version(needle, position, haystack, end, &hash)
+            }
         } else if end < Simd8::LANES {
             let hash = from_hash::<32, 4>(&self.simd32_hash);
-            unsafe { self.vector_search_in_default_version(haystack, end, &hash) }
+            unsafe {
+                crate::vector_search_in_default_version(needle, position, haystack, end, &hash)
+            }
         } else if end < Simd16::LANES {
             let hash = from_hash::<32, 8>(&self.simd32_hash);
-            unsafe { self.vector_search_in_default_version(haystack, end, &hash) }
+            unsafe {
+                crate::vector_search_in_default_version(needle, position, haystack, end, &hash)
+            }
         } else if end < Simd32::LANES {
             let hash = from_hash::<32, 16>(&self.simd32_hash);
-            unsafe { self.vector_search_in_default_version(haystack, end, &hash) }
+            unsafe {
+                crate::vector_search_in_default_version(needle, position, haystack, end, &hash)
+            }
         } else {
-            unsafe { self.vector_search_in_default_version(haystack, end, &self.simd32_hash) }
+            unsafe {
+                crate::vector_search_in_default_version(
+                    needle,
+                    position,
+                    haystack,
+                    end,
+                    &self.simd32_hash,
+                )
+            }
         }
     }
 
