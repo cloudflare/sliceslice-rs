@@ -27,6 +27,9 @@ use memchr::memchr;
 use std::rc::Rc;
 use std::sync::Arc;
 
+#[macro_use]
+mod multiversion;
+
 /// Needle that can be searched for within a haystack. It allows specialized
 /// searcher implementations for needle sizes known at compile time.
 pub trait Needle {
@@ -193,10 +196,7 @@ macro_rules! memcmp {
     };
 }
 
-#[multiversion::multiversion]
-#[clone(target = "[x86|x86_64]+avx2")]
-#[clone(target = "wasm32+simd128")]
-#[clone(target = "aarch64+neon")]
+multiversion! {
 unsafe fn vector_search_in_chunk<N: NeedleWithSize + ?Sized, V: Vector>(
     needle: &N,
     position: usize,
@@ -248,13 +248,9 @@ unsafe fn vector_search_in_chunk<N: NeedleWithSize + ?Sized, V: Vector>(
     }
 
     false
-}
+}}
 
-#[allow(dead_code)]
-#[multiversion::multiversion]
-#[clone(target = "[x86|x86_64]+avx2")]
-#[clone(target = "wasm32+simd128")]
-#[clone(target = "aarch64+neon")]
+multiversion! {
 pub(crate) unsafe fn vector_search_in<N: NeedleWithSize + ?Sized, V: Vector>(
     needle: &N,
     position: usize,
@@ -266,7 +262,7 @@ pub(crate) unsafe fn vector_search_in<N: NeedleWithSize + ?Sized, V: Vector>(
 
     let mut chunks = haystack[..end].chunks_exact(V::LANES);
     for chunk in &mut chunks {
-        if dispatch!(vector_search_in_chunk(
+        if dispatch!(TARGET => vector_search_in_chunk(
             needle,
             position,
             hash,
@@ -282,13 +278,13 @@ pub(crate) unsafe fn vector_search_in<N: NeedleWithSize + ?Sized, V: Vector>(
         let start = haystack.as_ptr().add(end - V::LANES);
         let mask = u32::MAX << (V::LANES - remainder);
 
-        if dispatch!(vector_search_in_chunk(needle, position, hash, start, mask)) {
+        if dispatch!(TARGET => vector_search_in_chunk(needle, position, hash, start, mask)) {
             return true;
         }
     }
 
     false
-}
+}}
 
 trait Searcher<N: NeedleWithSize + ?Sized> {
     fn needle(&self) -> &N;
