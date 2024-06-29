@@ -23,7 +23,6 @@ pub mod x86;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm32;
 
-mod bits;
 mod memcmp;
 
 use memchr::memchr;
@@ -237,7 +236,8 @@ unsafe fn vector_search_in_chunk<N: NeedleWithSize + ?Sized, V: Vector>(
             return true;
         }
 
-        eq = dispatch!(bits::clear_leftmost_set(eq));
+        // clear left-most bit
+        eq = eq & (eq - 1);
     }
 
     false
