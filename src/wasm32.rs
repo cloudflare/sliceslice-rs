@@ -242,25 +242,29 @@ impl<N: Needle> Wasm32Searcher<N> {
     #[inline]
     #[target_feature(enable = "simd128")]
     pub unsafe fn inlined_search_in(&self, haystack: &[u8]) -> bool {
-        if haystack.len() <= self.needle.size() {
-            return haystack == self.needle.as_bytes();
+        let needle = self.needle();
+
+        if haystack.len() <= needle.size() {
+            return haystack == needle.as_bytes();
         }
 
-        let end = haystack.len() - self.needle.size() + 1;
+        let position = self.position();
+        let end = haystack.len() - needle.size() + 1;
 
         if end < v16::LANES {
             unreachable!();
         } else if end < v32::LANES {
             let hash = VectorHash::<v16>::from(&self.v128_hash);
-            self.vector_search_in_simd128_version(haystack, end, &hash)
+            crate::vector_search_in_simd128_version(needle, position, haystack, end, &hash)
         } else if end < v64::LANES {
             let hash = VectorHash::<v32>::from(&self.v128_hash);
-            self.vector_search_in_simd128_version(haystack, end, &hash)
+            crate::vector_search_in_simd128_version(needle, position, haystack, end, &hash)
         } else if end < v128::LANES {
             let hash = VectorHash::<v64>::from(&self.v128_hash);
-            self.vector_search_in_simd128_version(haystack, end, &hash)
+            crate::vector_search_in_simd128_version(needle, position, haystack, end, &hash)
         } else {
-            self.vector_search_in_simd128_version(haystack, end, &self.v128_hash)
+            let hash = &self.v128_hash;
+            crate::vector_search_in_simd128_version(needle, position, haystack, end, hash)
         }
     }
 

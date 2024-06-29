@@ -319,33 +319,35 @@ impl<N: Needle> Avx2Searcher<N> {
     #[target_feature(enable = "avx2")]
     unsafe fn sse2_2_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m16i>::from(&self.sse2_hash);
-        self.vector_search_in_avx2_version(haystack, end, &hash)
+        crate::vector_search_in_avx2_version(self.needle(), self.position(), haystack, end, &hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn sse2_4_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m32i>::from(&self.sse2_hash);
-        self.vector_search_in_avx2_version(haystack, end, &hash)
+        crate::vector_search_in_avx2_version(self.needle(), self.position(), haystack, end, &hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn sse2_8_search_in(&self, haystack: &[u8], end: usize) -> bool {
         let hash = VectorHash::<__m64i>::from(&self.sse2_hash);
-        self.vector_search_in_avx2_version(haystack, end, &hash)
+        crate::vector_search_in_avx2_version(self.needle(), self.position(), haystack, end, &hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn sse2_16_search_in(&self, haystack: &[u8], end: usize) -> bool {
-        self.vector_search_in_avx2_version(haystack, end, &self.sse2_hash)
+        let hash = &self.sse2_hash;
+        crate::vector_search_in_avx2_version(self.needle(), self.position(), haystack, end, hash)
     }
 
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn avx2_search_in(&self, haystack: &[u8], end: usize) -> bool {
-        self.vector_search_in_avx2_version(haystack, end, &self.avx2_hash)
+        let hash = &self.avx2_hash;
+        crate::vector_search_in_avx2_version(self.needle(), self.position(), haystack, end, hash)
     }
 
     /// Inlined version of `search_in` for hot call sites.
