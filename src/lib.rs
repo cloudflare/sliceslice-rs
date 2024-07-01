@@ -6,6 +6,7 @@
 
 #![warn(missing_docs)]
 #![cfg_attr(feature = "stdsimd", feature(portable_simd))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 /// Substring search implementations using aarch64 architecture features.
 #[cfg(target_arch = "aarch64")]
