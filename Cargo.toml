@@ -9,6 +9,10 @@ repository = "https://github.com/cloudflare/sliceslice-rs"
 license = "MIT"
 keywords = ["search", "text", "string", "single", "simd"]
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [dependencies]
 cfg-if = "1"
 paste = "1"
