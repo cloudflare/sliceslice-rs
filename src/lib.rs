@@ -6,6 +6,7 @@
 
 #![warn(missing_docs)]
 #![cfg_attr(feature = "stdsimd", feature(portable_simd))]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 /// Substring search implementations using aarch64 architecture features.
 #[cfg(target_arch = "aarch64")]
@@ -23,9 +24,12 @@ pub mod x86;
 #[cfg(target_arch = "wasm32")]
 pub mod wasm32;
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+#[cfg(feature = "alloc")]
+use alloc::{boxed::Box, rc::Rc, sync::Arc, vec::Vec};
 use memchr::memchr;
-use std::rc::Rc;
-use std::sync::Arc;
 
 #[macro_use]
 mod multiversion;
@@ -58,6 +62,7 @@ impl Needle for [u8] {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<N: Needle + ?Sized> Needle for Box<N> {
     const SIZE: Option<usize> = N::SIZE;
 
@@ -67,6 +72,7 @@ impl<N: Needle + ?Sized> Needle for Box<N> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<N: Needle + ?Sized> Needle for Rc<N> {
     const SIZE: Option<usize> = N::SIZE;
 
@@ -76,6 +82,7 @@ impl<N: Needle + ?Sized> Needle for Rc<N> {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl<N: Needle + ?Sized> Needle for Arc<N> {
     const SIZE: Option<usize> = N::SIZE;
 
@@ -94,6 +101,7 @@ impl<N: Needle + ?Sized> Needle for &N {
     }
 }
 
+#[cfg(feature = "alloc")]
 impl Needle for Vec<u8> {
     const SIZE: Option<usize> = None;
 
@@ -189,10 +197,10 @@ impl<T: Vector, V: Vector + From<T>> From<&VectorHash<T>> for VectorHash<V> {
 
 macro_rules! memcmp {
     ($chunk:ident, $needle:ident, $len:literal) => {
-        std::slice::from_raw_parts($chunk, $len) == std::slice::from_raw_parts($needle, $len)
+        core::slice::from_raw_parts($chunk, $len) == core::slice::from_raw_parts($needle, $len)
     };
     ($chunk:ident, $needle:ident, $len:ident) => {
-        std::slice::from_raw_parts($chunk, $len) == std::slice::from_raw_parts($needle, $len)
+        core::slice::from_raw_parts($chunk, $len) == core::slice::from_raw_parts($needle, $len)
     };
 }
 
@@ -294,7 +302,9 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
 
 #[cfg(test)]
 mod tests {
-    use super::{MemchrSearcher, Needle};
+    use super::MemchrSearcher;
+    #[cfg(feature = "alloc")]
+    use super::Needle;
 
     fn memchr_search(haystack: &[u8], needle: &[u8]) -> bool {
         MemchrSearcher::new(needle[0]).search_in(haystack)
@@ -331,9 +341,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn needle_array_size() {
-        use std::rc::Rc;
-        use std::sync::Arc;
+        use alloc::rc::Rc;
+        use alloc::sync::Arc;
 
         assert_eq!(<[u8; 0] as Needle>::SIZE, Some(0));
 
@@ -347,9 +358,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     fn needle_slice_size() {
-        use std::rc::Rc;
-        use std::sync::Arc;
+        use alloc::rc::Rc;
+        use alloc::sync::Arc;
 
         assert_eq!(Box::<[u8]>::SIZE, None);
 

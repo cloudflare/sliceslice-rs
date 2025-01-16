@@ -27,7 +27,7 @@ where
 
     #[inline]
     unsafe fn load(a: *const u8) -> Self {
-        std::ptr::read_unaligned(a as *const Self)
+        core::ptr::read_unaligned(a as *const Self)
     }
 
     #[inline]

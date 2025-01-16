@@ -17,11 +17,11 @@
 #![allow(clippy::missing_safety_doc)]
 
 use crate::{MemchrSearcher, Needle, NeedleWithSize, Searcher, Vector, VectorHash};
-use seq_macro::seq;
 #[cfg(target_arch = "x86")]
-use std::arch::x86::*;
+use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+use core::arch::x86_64::*;
+use seq_macro::seq;
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
@@ -41,7 +41,7 @@ impl Vector for __m16i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn load(a: *const u8) -> Self {
-        __m16i(_mm_set1_epi16(std::ptr::read_unaligned(a as *const i16)))
+        __m16i(_mm_set1_epi16(core::ptr::read_unaligned(a as *const i16)))
     }
 
     #[inline]
@@ -59,7 +59,7 @@ impl Vector for __m16i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm_movemask_epi8(a.0) & 0x3)
+        core::mem::transmute(_mm_movemask_epi8(a.0) & 0x3)
     }
 }
 
@@ -88,7 +88,7 @@ impl Vector for __m32i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn load(a: *const u8) -> Self {
-        __m32i(_mm_set1_epi32(std::ptr::read_unaligned(a as *const i32)))
+        __m32i(_mm_set1_epi32(core::ptr::read_unaligned(a as *const i32)))
     }
 
     #[inline]
@@ -106,7 +106,7 @@ impl Vector for __m32i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm_movemask_epi8(a.0) & 0xF)
+        core::mem::transmute(_mm_movemask_epi8(a.0) & 0xF)
     }
 }
 
@@ -135,7 +135,7 @@ impl Vector for __m64i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn load(a: *const u8) -> Self {
-        __m64i(_mm_set1_epi64x(std::ptr::read_unaligned(a as *const i64)))
+        __m64i(_mm_set1_epi64x(core::ptr::read_unaligned(a as *const i64)))
     }
 
     #[inline]
@@ -153,7 +153,7 @@ impl Vector for __m64i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm_movemask_epi8(a.0) & 0xFF)
+        core::mem::transmute(_mm_movemask_epi8(a.0) & 0xFF)
     }
 }
 
@@ -195,7 +195,7 @@ impl Vector for __m128i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm_movemask_epi8(a))
+        core::mem::transmute(_mm_movemask_epi8(a))
     }
 }
 
@@ -230,7 +230,7 @@ impl Vector for __m256i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm256_movemask_epi8(a))
+        core::mem::transmute(_mm256_movemask_epi8(a))
     }
 }
 
@@ -533,16 +533,17 @@ mod tests {
     #[test]
     #[should_panic]
     fn avx2_invalid_position() {
-        unsafe { Avx2Searcher::with_position(b"foo".to_vec().into_boxed_slice(), 3) };
+        unsafe { Avx2Searcher::with_position(b"foo", 3) };
     }
 
     #[test]
     #[should_panic]
     fn dynamic_avx2_invalid_position() {
-        unsafe { DynamicAvx2Searcher::with_position(b"foo".to_vec().into_boxed_slice(), 3) };
+        unsafe { DynamicAvx2Searcher::with_position(b"foo", 3) };
     }
 
     #[test]
+    #[cfg(feature = "alloc")]
     #[should_panic]
     fn avx2_empty_needle() {
         unsafe { Avx2Searcher::new(Box::new([])) };
@@ -567,22 +568,24 @@ mod tests {
     #[test]
     #[cfg(target_pointer_width = "64")]
     fn size_of_avx2_searcher() {
-        use std::mem::size_of;
+        use core::mem::size_of;
 
         assert_eq!(size_of::<Avx2Searcher::<&[u8]>>(), 128);
         assert_eq!(size_of::<Avx2Searcher::<[u8; 0]>>(), 128);
         assert_eq!(size_of::<Avx2Searcher::<[u8; 16]>>(), 128);
+        #[cfg(feature = "alloc")]
         assert_eq!(size_of::<Avx2Searcher::<Box<[u8]>>>(), 128);
     }
 
     #[test]
     #[cfg(target_pointer_width = "64")]
     fn size_of_dynamic_avx2_searcher() {
-        use std::mem::size_of;
+        use core::mem::size_of;
 
         assert_eq!(size_of::<DynamicAvx2Searcher::<&[u8]>>(), 160);
         assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 0]>>(), 160);
         assert_eq!(size_of::<DynamicAvx2Searcher::<[u8; 16]>>(), 160);
+        #[cfg(feature = "alloc")]
         assert_eq!(size_of::<DynamicAvx2Searcher::<Box<[u8]>>>(), 160);
     }
 

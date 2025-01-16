@@ -3,7 +3,7 @@
 use crate::{Needle, NeedleWithSize, Searcher, Vector, VectorHash};
 
 #[cfg(target_arch = "aarch64")]
-use std::arch::aarch64::*;
+use core::arch::aarch64::*;
 
 static MD: [u8; 16] = [
     1 << 0,

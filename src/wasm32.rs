@@ -2,7 +2,7 @@
 
 use crate::{Needle, NeedleWithSize, Searcher, Vector, VectorHash};
 #[cfg(target_arch = "wasm32")]
-use std::arch::wasm32::*;
+use core::arch::wasm32::*;
 
 impl Vector for v128 {
     const LANES: usize = 16;
@@ -17,7 +17,7 @@ impl Vector for v128 {
     #[inline]
     #[target_feature(enable = "simd128")]
     unsafe fn load(a: *const u8) -> Self {
-        std::ptr::read_unaligned(a as *const v128)
+        core::ptr::read_unaligned(a as *const v128)
     }
 
     #[inline]
@@ -57,7 +57,7 @@ impl Vector for v64 {
     #[inline]
     #[target_feature(enable = "simd128")]
     unsafe fn load(a: *const u8) -> Self {
-        Self(u64x2_splat(std::ptr::read_unaligned(a as *const u64)))
+        Self(u64x2_splat(core::ptr::read_unaligned(a as *const u64)))
     }
 
     #[inline]
@@ -103,7 +103,7 @@ impl Vector for v32 {
     #[inline]
     #[target_feature(enable = "simd128")]
     unsafe fn load(a: *const u8) -> Self {
-        Self(u32x4_splat(std::ptr::read_unaligned(a as *const u32)))
+        Self(u32x4_splat(core::ptr::read_unaligned(a as *const u32)))
     }
 
     #[inline]
@@ -149,7 +149,7 @@ impl Vector for v16 {
     #[inline]
     #[target_feature(enable = "simd128")]
     unsafe fn load(a: *const u8) -> Self {
-        Self(u16x8_splat(std::ptr::read_unaligned(a as *const u16)))
+        Self(u16x8_splat(core::ptr::read_unaligned(a as *const u16)))
     }
 
     #[inline]
