@@ -302,5 +302,5 @@ mod tests {
         }
     }
 
-    crate::generate_tests!(neon_searcher, NeonSearcher);
+    crate::tests::generate_tests!(neon_searcher, NeonSearcher);
 }

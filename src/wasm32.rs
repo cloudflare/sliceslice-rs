@@ -289,5 +289,5 @@ mod tests {
         }
     }
 
-    crate::generate_tests!(wasm32_searcher, Wasm32Searcher);
+    crate::tests::generate_tests!(wasm32_searcher, Wasm32Searcher);
 }

@@ -293,7 +293,7 @@ trait Searcher<N: NeedleWithSize + ?Sized> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::{MemchrSearcher, Needle};
 
     fn memchr_search(haystack: &[u8], needle: &[u8]) -> bool {
@@ -380,7 +380,6 @@ mod tests {
         result
     }
 
-    #[macro_export]
     macro_rules! generate_tests {
         ($mod: ident, $name:ident) => {
             mod $mod {
@@ -418,6 +417,7 @@ mod tests {
             }
         };
     }
+    pub(crate) use generate_tests;
 
     pub(crate) fn search_same<S: TestSearcher>() {
         assert!(search::<S>(b"x", b"x"));

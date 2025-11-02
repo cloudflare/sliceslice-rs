@@ -59,7 +59,7 @@ impl Vector for __m16i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm_movemask_epi8(a.0) & 0x3)
+        i32::cast_unsigned(_mm_movemask_epi8(a.0) & 0x3)
     }
 }
 
@@ -106,7 +106,7 @@ impl Vector for __m32i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm_movemask_epi8(a.0) & 0xF)
+        i32::cast_unsigned(_mm_movemask_epi8(a.0) & 0xF)
     }
 }
 
@@ -153,7 +153,7 @@ impl Vector for __m64i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm_movemask_epi8(a.0) & 0xFF)
+        i32::cast_unsigned(_mm_movemask_epi8(a.0) & 0xFF)
     }
 }
 
@@ -195,7 +195,7 @@ impl Vector for __m128i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm_movemask_epi8(a))
+        i32::cast_unsigned(_mm_movemask_epi8(a))
     }
 }
 
@@ -230,7 +230,7 @@ impl Vector for __m256i {
     #[inline]
     #[target_feature(enable = "avx2")]
     unsafe fn to_bitmask(a: Self) -> u32 {
-        std::mem::transmute(_mm256_movemask_epi8(a))
+        i32::cast_unsigned(_mm256_movemask_epi8(a))
     }
 }
 
@@ -587,7 +587,7 @@ mod tests {
     }
 
     impl crate::tests::TestSearcher for Avx2Searcher<&[u8]> {
-        fn with_position(needle: &'static [u8], position: usize) -> Avx2Searcher<&[u8]> {
+        fn with_position(needle: &'static [u8], position: usize) -> Avx2Searcher<&'static [u8]> {
             unsafe { Avx2Searcher::with_position(needle, position) }
         }
 
@@ -596,10 +596,10 @@ mod tests {
         }
     }
 
-    crate::generate_tests!(avx2_searcher, Avx2Searcher);
+    crate::tests::generate_tests!(avx2_searcher, Avx2Searcher);
 
     impl crate::tests::TestSearcher for DynamicAvx2Searcher<&[u8]> {
-        fn with_position(needle: &'static [u8], position: usize) -> DynamicAvx2Searcher<&[u8]> {
+        fn with_position(needle: &'static [u8], position: usize) -> DynamicAvx2Searcher<&'static [u8]> {
             unsafe { DynamicAvx2Searcher::with_position(needle, position) }
         }
 
@@ -608,5 +608,5 @@ mod tests {
         }
     }
 
-    crate::generate_tests!(dynamic_avx2_searcher, DynamicAvx2Searcher);
+    crate::tests::generate_tests!(dynamic_avx2_searcher, DynamicAvx2Searcher);
 }

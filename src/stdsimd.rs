@@ -193,5 +193,5 @@ mod tests {
         }
     }
 
-    crate::generate_tests!(std_simd_searcher, StdSimdSearcher);
+    crate::tests::generate_tests!(std_simd_searcher, StdSimdSearcher);
 }
